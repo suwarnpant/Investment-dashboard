@@ -135,23 +135,41 @@ for i, (city, cid) in enumerate(cities.items()):
 # ---------------------------------------------------------
 # MACRO INDICATORS
 # ---------------------------------------------------------
+# ---------------------------------------------------------
+# MACRO INDICATORS (FIXED: logos + BTC/Gold/Crude prices)
+# ---------------------------------------------------------
 MACROS = {
-    "Nifty 50": ("^NSEI", "https://upload.wikimedia.org/wikipedia/commons/3/3a/NSE_Logo.svg"),
-    "Nasdaq 100": ("^NDX", "https://upload.wikimedia.org/wikipedia/commons/7/77/NASDAQ_Logo.svg"),
-    "Hang Seng": ("^HSI", "https://upload.wikimedia.org/wikipedia/commons/5/56/Hang_Seng_Bank_logo.svg"),
-    "BTC/USD": ("BTC-USD", "https://cryptologos.cc/logos/bitcoin-btc-logo.png"),
-    "USD/INR": ("USDINR=X", "https://upload.wikimedia.org/wikipedia/commons/4/41/Flag_of_India.svg"),
-    "Gold": ("GC=F", "https://upload.wikimedia.org/wikipedia/commons/4/46/Gold_ingot_icon.png"),
-    "Crude Oil": ("CL=F", "https://upload.wikimedia.org/wikipedia/commons/6/6e/Oil_Barrel.svg")
+    "Nifty 50": ("^NSEI", "https://i.imgur.com/pQXjO7p.png"),
+    "Nasdaq 100": ("^NDX", "https://i.imgur.com/6Z7L8tW.png"),
+    "Hang Seng": ("^HSI", "https://i.imgur.com/Dm0H7mE.png"),
+    "BTC/USD": ("BTC-USD", "https://cryptologos.cc/logos/bitcoin-btc-logo.png?v=029"),
+    "USD/INR": ("USDINR=X", "https://i.imgur.com/Wx1yHOP.png"),
+    "Gold": ("GC=F", "https://i.imgur.com/p7TCy3n.png"),
+    "Crude Oil": ("CL=F", "https://i.imgur.com/KTc9KRV.png")
 }
 
 def fetch_macro(ticker):
     try:
+        # First attempt - 2 day history
         data = yf.Ticker(ticker).history(period="2d")
-        last = data["Close"].iloc[-1]
-        prev = data["Close"].iloc[-2]
-        pct = (last - prev) / prev * 100
-        return last, pct
+        if len(data) >= 2:
+            last = data["Close"].iloc[-1]
+            prev = data["Close"].iloc[-2]
+            pct = (last - prev) / prev * 100
+            return last, pct
+
+        # Fallback 1 — use fast_info
+        t = yf.Ticker(ticker)
+        last = t.fast_info.get("last_price")
+        prev = t.fast_info.get("previous_close")
+
+        if last and prev:
+            pct = (last - prev) / prev * 100
+            return last, pct
+
+        # Fallback 2 — as last resort
+        return None, None
+
     except:
         return None, None
 
