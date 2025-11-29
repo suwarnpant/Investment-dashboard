@@ -165,16 +165,30 @@ mcols = st.columns(4)
 
 for i, (name, ticker, logo) in enumerate(indicators):
     price, pct = get_price_yf(ticker)
-    color = "lightgreen" if pct and pct > 0 else "red"
+
+    # --- SAFE FORMAT ---
+    if price is None:
+        price_txt = "N/A"
+    else:
+        price_txt = f"{price:.2f}"
+
+    if pct is None:
+        pct_txt = "N/A"
+        color = "white"
+    else:
+        pct_txt = f"{pct:+.2f}%"
+        color = "lightgreen" if pct > 0 else "red"
+
     mcols[i % 4].markdown(
         f"""
         <div class="macro-card">
             <img src="{logo}" class="macro-logo"><br>
             <b>{name}</b><br>
-            {price:.2f if price else "N/A"}<br>
-            <span style="color:{color}">{pct:+.2f}%</span>
+            {price_txt}<br>
+            <span style="color:{color}">{pct_txt}</span>
         </div>
         """,
         unsafe_allow_html=True
     )
+
 
