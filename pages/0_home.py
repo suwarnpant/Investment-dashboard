@@ -16,7 +16,13 @@ UNSPLASH_API_KEY = st.secrets["unsplash"]["api_key"]
 
 def get_unsplash_image():
     try:
-        url = f"https://api.unsplash.com/photos/random?query=calm&orientation=landscape&client_id={UNSPLASH_API_KEY}"
+        # UPDATED QUERY → calm minimal dark abstract
+        url = (
+            "https://api.unsplash.com/photos/random"
+            "?query=minimal dark abstract gradient texture"
+            "&orientation=landscape"
+            f"&client_id={UNSPLASH_API_KEY}"
+        )
         r = requests.get(url).json()
         return r["urls"]["full"]
     except:
@@ -119,7 +125,7 @@ for i, (city, cid) in enumerate(cities.items()):
             <div class="weather-card">
                 <h4 style="margin-bottom:2px;">{city}</h4>
                 {'<img src="'+icon+'" width="50">' if icon else ''}
-                <div>{temp if temp else 'N/A'}°C</div>
+                <div>{f"{temp:.1f}" if temp is not None else "N/A"}°C</div>
                 <small>{desc if desc else ''}</small>
             </div>
             """,
