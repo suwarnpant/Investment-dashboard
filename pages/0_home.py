@@ -17,8 +17,8 @@ UNSPLASH_API_KEY = st.secrets["unsplash"]["api_key"]
 def get_unsplash_image():
     try:
         url = (
-            "https://api.unsplash.com/search/photos"
-            "query=dark space&orientation=landscape&client_id="
+            "https://api.unsplash.com/photos/random"
+            "query=dark,space&orientation=landscape&client_id="
             + UNSPLASH_API_KEY
         )
 
