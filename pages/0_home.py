@@ -3,7 +3,7 @@ import requests
 import yfinance as yf
 import pytz
 from datetime import datetime
-
+import time
 # ---------------------------------------------------------
 # PAGE CONFIG
 # ---------------------------------------------------------
@@ -17,7 +17,7 @@ UNSPLASH_API_KEY = st.secrets["unsplash"]["api_key"]
 def get_unsplash_image():
     try:
         url = (
-            f"https://api.unsplash.com/photos"
+            f"https://api.unsplash.com{int(time.time())}"
             f"?query=dark,gradient"
             f"&orientation=landscape"
             f"&client_id={UNSPLASH_API_KEY}"
