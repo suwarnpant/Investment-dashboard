@@ -16,7 +16,7 @@ def get_unsplash_image():
     try:
         url = (
             "https://api.unsplash.com/photos/random"
-            "?query=minimal dark gradient abstract texture"
+            "?query=minimal dark abstract texture"
             "&orientation=landscape"
         )
         headers = {"Authorization": f"Client-ID {UNSPLASH_API_KEY}"}
