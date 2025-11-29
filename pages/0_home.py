@@ -1,194 +1,156 @@
 import streamlit as st
 import requests
-import base64
-from datetime import datetime
-import pytz
+import datetime
+import yfinance as yf
+
+st.set_page_config(page_title="Home", layout="wide")
 
 # ---------------------------------------------------------
-# PAGE CONFIG
+# FETCH BACKGROUND FROM UNSPLASH
 # ---------------------------------------------------------
-st.set_page_config(
-    page_title="Home",
-    layout="wide",
-    initial_sidebar_state="expanded",
+def get_unsplash_background():
+    try:
+        access_key = st.secrets["unsplash"]["access_key"]
+        query = "calm minimal gradient abstract soft background"
+        url = f"https://api.unsplash.com/photos/random?query={query}&orientation=landscape&client_id={access_key}"
+        data = requests.get(url).json()
+        return data["urls"]["full"]
+    except:
+        return "https://images.unsplash.com/photo-1503264116251-35a269479413?auto=format&fit=crop&w=1600&q=80"
+
+bg_image = get_unsplash_background()
+
+# Background style
+st.markdown(
+    f"""
+    <style>
+        .stApp {{
+            background: url('{bg_image}') no-repeat center center fixed !important;
+            background-size: cover !important;
+        }}
+
+        .glass-card {{
+            padding: 20px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.3);
+            text-align: center;
+            color: #ffffff;
+            font-size: 18px;
+        }}
+
+        .macro-card {{
+            padding: 15px;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.25);
+            text-align: center;
+            color: #ffffff;
+            font-size: 17px;
+        }}
+
+        .macro-logo {{
+            width: 32px;
+            height: 32px;
+            margin-bottom: 6px;
+        }}
+
+        .weather-logo {{
+            width: 36px;
+        }}
+    </style>
+    """,
+    unsafe_allow_html=True
 )
 
 # ---------------------------------------------------------
-# UNSPLASH BACKGROUND (BASE64 EMBED, ALWAYS WORKS)
+# GREETING
 # ---------------------------------------------------------
-UNSPLASH_API_KEY = st.secrets["unsplash"]["api_key"]
-
-def get_bg_base64():
-    try:
-        url = (
-            "https://api.unsplash.com/photos/random"
-            "?query=minimal dark gradient abstract"
-            "&orientation=landscape"
-        )
-        headers = {"Authorization": f"Client-ID {UNSPLASH_API_KEY}"}
-        r = requests.get(url, headers=headers, timeout=10)
-
-        if r.status_code == 200:
-            img_url = r.json()["urls"]["full"]
-        else:
-            img_url = "https://images.unsplash.com/photo-1522199670076-2852f80289c7"
-    except:
-        img_url = "https://images.unsplash.com/photo-1522199670076-2852f80289c7"
-
-    img_data = requests.get(img_url).content
-    encoded = base64.b64encode(img_data).decode()
-    return encoded
-
-
-bg_base64 = get_bg_base64()
-
-background_css = f"""
-<style>
-[data-testid="stAppViewContainer"] {{
-    background: url("data:image/jpeg;base64,{bg_base64}") !important;
-    background-size: cover !important;
-    background-position: center !important;
-    background-attachment: fixed !important;
-}}
-
-[data-testid="stHeader"] {{
-    background: rgba(0,0,0,0) !important;
-}}
-
-.block-container {{
-    background: rgba(0,0,0,0) !important;
-}}
-
-.card {{
-    background: rgba(0,0,0,0.4);
-    padding: 18px;
-    border-radius: 14px;
-    color: white;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    text-align: center;
-}}
-
-.macro-card {{
-    background: rgba(0,0,0,0.45);
-    padding: 18px;
-    border-radius: 12px;
-    color: white;
-    width: 160px;
-    display: inline-block;
-    margin: 8px;
-}}
-
-.macro-logo {{
-    width: 32px;
-    height: 32px;
-    margin-bottom: 6px;
-}}
-</style>
-"""
-st.markdown(background_css, unsafe_allow_html=True)
-
-# ---------------------------------------------------------
-# GREETING (IST BASED)
-# ---------------------------------------------------------
-ist = pytz.timezone("Asia/Kolkata")
-now = datetime.now(ist)
-hour = now.hour
-
+hour = datetime.datetime.now().hour
 if hour < 12:
-    greet = "Good Morning Suwarn"
+    greeting = "Good Morning"
 elif hour < 17:
-    greet = "Good Afternoon Suwarn"
+    greeting = "Good Afternoon"
 else:
-    greet = "Good Evening Suwarn"
+    greeting = "Good Evening"
 
-st.markdown(f"<h1 style='color:white'>{greet}</h1>", unsafe_allow_html=True)
+st.markdown(f"<h2 style='color:white;'>👋 {greeting}, Suwarn</h2>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# WEATHER (4 cities)
+# WEATHER SECTION
 # ---------------------------------------------------------
-WEATHER_KEY = st.secrets["weather"]["api_key"]
-cities = ["Pune", "Mumbai", "Ahmedabad", "Haldwani"]
+API_KEY = st.secrets["weather"]["api_key"]
+CITIES = ["Pune", "Mumbai", "Ahmedabad", "Haldwani"]
 
 def get_weather(city):
-    url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={WEATHER_KEY}&units=metric"
-    r = requests.get(url).json()
-    temp = r["main"]["temp"]
-    cond = r["weather"][0]["description"].title()
-    return temp, cond
+    try:
+        url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
+        data = requests.get(url).json()
+        temp = data["main"]["temp"]
+        desc = data["weather"][0]["description"].title()
+        icon = data["weather"][0]["icon"]
+        icon_url = f"https://openweathermap.org/img/wn/{icon}@2x.png"
+        return temp, desc, icon_url
+    except:
+        return None, None, None
 
-st.markdown("<h2 style='color:white'>Weather</h2>", unsafe_allow_html=True)
+st.markdown("<h3 style='color:white;'>🌦 Weather</h3>", unsafe_allow_html=True)
+weather_cols = st.columns(len(CITIES))
 
-wcols = st.columns(len(cities))
-
-for i, city in enumerate(cities):
-    temp, cond = get_weather(city)
-    wcols[i].markdown(
-        f"""
-        <div class="card">
-            <h3>{city}</h3>
-            <b>{temp:.1f}°C</b><br>
-            {cond}
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+for i, city in enumerate(CITIES):
+    temp, desc, icon = get_weather(city)
+    with weather_cols[i]:
+        st.markdown(
+            f"""
+            <div class="glass-card">
+                <img src="{icon}" class="weather-logo">
+                <br><b>{city}</b><br>
+                {temp}°C<br>
+                {desc}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
 # ---------------------------------------------------------
 # MACRO INDICATORS
 # ---------------------------------------------------------
-def get_price_yf(symbol):
+MACROS = {
+    "Nifty 50": ("^NSEI", "https://upload.wikimedia.org/wikipedia/commons/3/3a/NSE_Logo.svg"),
+    "NASDAQ 100": ("^NDX", "https://upload.wikimedia.org/wikipedia/commons/7/77/NASDAQ_Logo.svg"),
+    "US 10Y Bond": ("^TNX", "https://cdn-icons-png.flaticon.com/512/711/711284.png"),
+    "India VIX": ("^INDIAVIX", "https://cdn-icons-png.flaticon.com/512/476/476700.png"),
+    "US VIX": ("^VIX", "https://cdn-icons-png.flaticon.com/512/476/476700.png"),
+}
+
+def fetch_macro(ticker):
     try:
-        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d"
-        r = requests.get(url).json()
-        result = r["chart"]["result"][0]
-        price = result["meta"]["regularMarketPrice"]
-        prev = result["meta"]["chartPreviousClose"]
-        pct = ((price - prev) / prev) * 100
-        return price, pct
+        data = yf.Ticker(ticker).history(period="2d")
+        last = data["Close"].iloc[-1]
+        prev = data["Close"].iloc[-2]
+        pct = (last - prev) / prev * 100
+        return last, pct
     except:
         return None, None
 
-indicators = [
-    ("Nifty 50", "^NSEI", "https://icons.iconarchive.com/icons/iconsmind/outline/512/Line-Chart-icon.png"),
-    ("Nasdaq 100", "^NDX", "https://cdn-icons-png.flaticon.com/512/833/833524.png"),
-    ("Hang Seng", "^HSI", "https://cdn-icons-png.flaticon.com/512/32/32213.png"),
-    ("BTC/USD", "BTC-USD", "https://cryptologos.cc/logos/bitcoin-btc-logo.png"),
-    ("Gold", "GC=F", "https://cdn-icons-png.flaticon.com/512/179/179249.png"),
-    ("Crude Oil", "CL=F", "https://cdn-icons-png.flaticon.com/512/727/727240.png"),
-    ("USD/INR", "INR=X", "https://cdn-icons-png.flaticon.com/512/2894/2894978.png"),
-]
+st.markdown("<h3 style='color:white; margin-top:20px;'>🌍 Macro Indicators</h3>", unsafe_allow_html=True)
+macro_cols = st.columns(len(MACROS))
 
-st.markdown("<h2 style='color:white'>Macro Indicators</h2>", unsafe_allow_html=True)
-
-mcols = st.columns(4)
-
-for i, (name, ticker, logo) in enumerate(indicators):
-    price, pct = get_price_yf(ticker)
-
-    # --- SAFE FORMAT ---
-    if price is None:
-        price_txt = "N/A"
-    else:
-        price_txt = f"{price:.2f}"
-
-    if pct is None:
-        pct_txt = "N/A"
-        color = "white"
-    else:
-        pct_txt = f"{pct:+.2f}%"
-        color = "lightgreen" if pct > 0 else "red"
-
-    mcols[i % 4].markdown(
-        f"""
-        <div class="macro-card">
-            <img src="{logo}" class="macro-logo"><br>
-            <b>{name}</b><br>
-            {price_txt}<br>
-            <span style="color:{color}">{pct_txt}</span>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-
+for i, (name, (ticker, logo)) in enumerate(MACROS.items()):
+    value, pct = fetch_macro(ticker)
+    with macro_cols[i]:
+        st.markdown(
+            f"""
+            <div class="macro-card">
+                <img src="{logo}" class="macro-logo">
+                <br><b>{name}</b><br>
+                {value:,.2f if value else "N/A"}<br>
+                <span style="color:{'lightgreen' if pct and pct>0 else 'salmon'};">
+                    {pct:+.2f}%</span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
