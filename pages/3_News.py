@@ -19,4 +19,3 @@ for _, row in df.iterrows():
         st.write(n.get('summary', ''))
         st.write("---")
 
-st.autorefresh(interval=900000)
