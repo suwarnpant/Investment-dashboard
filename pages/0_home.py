@@ -139,14 +139,36 @@ for i, (city, cid) in enumerate(cities.items()):
 # MACRO INDICATORS (FIXED: logos + BTC/Gold/Crude prices)
 # ---------------------------------------------------------
 MACROS = {
-    "Nifty 50": ("^NSEI", "https://i.imgur.com/pQXjO7p.png"),
-    "Nasdaq 100": ("^NDX", "https://i.imgur.com/6Z7L8tW.png"),
-    "Hang Seng": ("^HSI", "https://i.imgur.com/Dm0H7mE.png"),
-    "BTC/USD": ("BTC-USD", "https://cryptologos.cc/logos/bitcoin-btc-logo.png?v=029"),
-    "USD/INR": ("USDINR=X", "https://i.imgur.com/Wx1yHOP.png"),
-    "Gold": ("GC=F", "https://i.imgur.com/p7TCy3n.png"),
-    "Crude Oil": ("CL=F", "https://i.imgur.com/KTc9KRV.png")
+    "Nifty 50": (
+        "^NSEI",
+        "https://static.vecteezy.com/system/resources/previews/020/975/579/original/nse-national-stock-exchange-india-logo-icon-free-png.png"
+    ),
+    "Nasdaq 100": (
+        "^NDX",
+        "https://static.vecteezy.com/system/resources/previews/020/975/568/original/nasdaq-logo-icon-free-png.png"
+    ),
+    "Hang Seng": (
+        "^HSI",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Hang_Seng_Bank_logo.svg/256px-Hang_Seng_Bank_logo.svg.png"
+    ),
+    "BTC/USD": (
+        "BTC-USD",
+        "https://cryptologos.cc/logos/bitcoin-btc-logo.png?v=031"
+    ),
+    "USD/INR": (
+        "USDINR=X",
+        "https://static-00.iconduck.com/assets.00/currency-exchange-dollar-rupee-icon-2048x2048-19m4kzqv.png"
+    ),
+    "Gold": (
+        "GC=F",
+        "https://static-00.iconduck.com/assets.00/gold-bars-icon-2048x1536-euqf6j6p.png"
+    ),
+    "Crude Oil": (
+        "CL=F",
+        "https://static-00.iconduck.com/assets.00/oil-barrel-icon-512x512-w5tl5p3u.png"
+    )
 }
+
 
 def fetch_macro(ticker):
     try:
