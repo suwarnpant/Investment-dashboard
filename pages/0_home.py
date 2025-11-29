@@ -11,7 +11,7 @@ st.set_page_config(page_title="Home", layout="wide")
 def get_unsplash_background():
     try:
         access_key = st.secrets["unsplash"]["access_key"]
-        query = "calm minimal gradient abstract soft background"
+        query = "calm minimal gradient abstract soft dark background"
         url = f"https://api.unsplash.com/photos/random?query={query}&orientation=landscape&client_id={access_key}"
         data = requests.get(url).json()
         return data["urls"]["full"]
@@ -20,7 +20,9 @@ def get_unsplash_background():
 
 bg_image = get_unsplash_background()
 
-# Background style
+# ---------------------------------------------------------
+# BACKGROUND CSS + CARD STYLES
+# ---------------------------------------------------------
 st.markdown(
     f"""
     <style>
@@ -32,24 +34,27 @@ st.markdown(
         .glass-card {{
             padding: 20px;
             border-radius: 18px;
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(255, 255, 255, 0.20);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255,255,255,0.25);
             text-align: center;
             color: #ffffff;
             font-size: 18px;
+            font-weight: 500;
         }}
 
         .macro-card {{
             padding: 15px;
             border-radius: 15px;
-            background: rgba(255, 255, 255, 0.12);
-            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255,255,255,0.25);
             text-align: center;
-            color: #ffffff;
+            color: white;
             font-size: 17px;
+            font-weight: 500;
         }}
 
         .macro-logo {{
@@ -59,7 +64,13 @@ st.markdown(
         }}
 
         .weather-logo {{
-            width: 36px;
+            width: 46px;
+            margin-bottom: -5px;
+        }}
+
+        h2, h3 {{
+            color: white !important;
+            text-shadow: 0px 0px 6px rgba(0,0,0,0.4);
         }}
     </style>
     """,
@@ -77,7 +88,7 @@ elif hour < 17:
 else:
     greeting = "Good Evening"
 
-st.markdown(f"<h2 style='color:white;'>👋 {greeting}, Suwarn</h2>", unsafe_allow_html=True)
+st.markdown(f"<h2>👋 {greeting}, Suwarn</h2>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # WEATHER SECTION
@@ -97,19 +108,19 @@ def get_weather(city):
     except:
         return None, None, None
 
-st.markdown("<h3 style='color:white;'>🌦 Weather</h3>", unsafe_allow_html=True)
+st.markdown("<h3>🌦 Weather</h3>", unsafe_allow_html=True)
 weather_cols = st.columns(len(CITIES))
 
 for i, city in enumerate(CITIES):
-    temp, desc, icon = get_weather(city)
+    temp, desc, icon_url = get_weather(city)
     with weather_cols[i]:
         st.markdown(
             f"""
             <div class="glass-card">
-                <img src="{icon}" class="weather-logo">
-                <br><b>{city}</b><br>
-                {temp}°C<br>
-                {desc}
+                <img src="{icon_url}" class="weather-logo"><br>
+                <b>{city}</b><br>
+                {temp if temp else "N/A"}°C<br>
+                {desc if desc else ""}
             </div>
             """,
             unsafe_allow_html=True
@@ -136,20 +147,33 @@ def fetch_macro(ticker):
     except:
         return None, None
 
-st.markdown("<h3 style='color:white; margin-top:20px;'>🌍 Macro Indicators</h3>", unsafe_allow_html=True)
+st.markdown("<h3 style='margin-top:25px;'>🌍 Macro Indicators</h3>", unsafe_allow_html=True)
 macro_cols = st.columns(len(MACROS))
 
 for i, (name, (ticker, logo)) in enumerate(MACROS.items()):
     value, pct = fetch_macro(ticker)
+
+    # SAFE FORMATTING
+    if value is None:
+        value_fmt = "N/A"
+    else:
+        value_fmt = f"{value:,.2f}"
+
+    if pct is None:
+        pct_fmt = ""
+        pct_color = "white"
+    else:
+        pct_fmt = f"{pct:+.2f}%"
+        pct_color = "lightgreen" if pct > 0 else "salmon"
+
     with macro_cols[i]:
         st.markdown(
             f"""
             <div class="macro-card">
                 <img src="{logo}" class="macro-logo">
                 <br><b>{name}</b><br>
-                {value:,.2f if value else "N/A"}<br>
-                <span style="color:{'lightgreen' if pct and pct>0 else 'salmon'};">
-                    {pct:+.2f}%</span>
+                {value_fmt}<br>
+                <span style="color:{pct_color};">{pct_fmt}</span>
             </div>
             """,
             unsafe_allow_html=True
