@@ -52,16 +52,33 @@ page_bg = f"""
     background-size: cover;
 }}
 
-.macro-card {{
-    padding: 12px;
-    border-radius: 18px;
-    background: rgba(255,255,255,0.10);
-    text-align: center;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+.weather-card, .macro-card {
+    padding: 16px;
+    border-radius: 22px;
+    background: rgba(255,255,255,0.03);  /* ultra-light for transparency */
+    backdrop-filter: blur(12px);
+
+    /* ---- Neumorphic Shadow Magic ---- */
+    box-shadow:
+        8px 8px 16px rgba(0,0,0,0.45),     /* deep shadow bottom-right */
+        -8px -8px 16px rgba(255,255,255,0.04);  /* soft light top-left */
+
+    /* Optional subtle gloss highlight */
+    background-blend-mode: overlay;
+
     color: white;
-    margin-bottom: 10px;
-}}
+    text-align: center;
+    margin-bottom: 20px;
+    transition: 0.25s ease;
+}
+
+/* Hover effect (optional but beautiful) */
+.weather-card:hover, .macro-card:hover {
+    transform: translateY(-3px);
+    box-shadow:
+        12px 12px 20px rgba(0,0,0,0.55),
+        -12px -12px 20px rgba(255,255,255,0.05);
+}
 
 .macro-logo {{
     width: 35px;
@@ -69,15 +86,7 @@ page_bg = f"""
     margin-bottom: 8px;
 }}
 
-.weather-card {{
-    padding: 12px;
-    border-radius: 18px;
-    background: rgba(255,255,255,0.05);
-    text-align: center;
-    backdrop-filter: blur(10px);
-    color: white;
-    margin-bottom: 15px;
-}}
+
 </style>
 """
 st.markdown(page_bg, unsafe_allow_html=True)
