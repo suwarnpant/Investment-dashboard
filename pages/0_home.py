@@ -197,44 +197,75 @@ MACROS = {
 
 def fetch_macro(ticker):
     try:
-        # Yahoo Finance first attempt
+        # Try Yahoo Finance first
         data = yf.Ticker(ticker).history(period="5d", interval="1d")
 
         if len(data) >= 2:
             last = float(data["Close"].iloc[-1])
             prev = float(data["Close"].iloc[-2])
             pct = (last - prev) / prev * 100
-            return last, pct
 
-        # -------------------------
-        # FALLBACKS FOR SPECIAL ASSETS
-        # -------------------------
+            # If NOT gold, return directly
+            if ticker != "GC=F":
+                return last, pct
 
-        # BTC fallback (Coindesk)
+        # ---------------------------------------------------------
+        # SPECIAL HANDLING FOR GOLD → Convert to INR per 10 grams
+        # ---------------------------------------------------------
+        if ticker == "GC=F":
+            # Step 1: Get gold price (fallback via Metals API)
+            try:
+                r = requests.get(
+                    "https://metals-api.com/api/latest?access_key=free&base=USD&symbols=XAU"
+                ).json()
+
+                if "rates" in r and "XAU" in r["rates"]:
+                    usd_per_ounce = 1 / float(r["rates"]["XAU"]) * 31.1035
+                else:
+                    # fallback if API fails: use Yahoo (if available)
+                    usd_per_ounce = last
+
+            except:
+                usd_per_ounce = last  # fallback
+
+            # Step 2: Get USD/INR rate
+            try:
+                fx_data = yf.Ticker("USDINR=X").history(period="2d")
+                usdinr = float(fx_data["Close"].iloc[-1])
+            except:
+                usdinr = 83.0  # fallback
+
+            # Step 3: Convert USD/oz → INR/10g
+            inr_per_gram = (usd_per_ounce / 31.1035) * usdinr
+            gold_inr_10g = inr_per_gram * 10
+
+            return gold_inr_10g, 0.0
+
+        # ---------------------------------------------------------
+        # BTC fallback if Yahoo fails
+        # ---------------------------------------------------------
         if ticker == "BTC-USD":
             r = requests.get("https://api.coindesk.com/v1/bpi/currentprice/BTC.json").json()
-            last = float(r["bpi"]["USD"]["rate_float"])
-            return last, 0.0
+            val = float(r["bpi"]["USD"]["rate_float"])
+            return val, 0.0
 
-        # GOLD fallback (Metals API — FREE endpoint)
-        if ticker == "GC=F":
-            r = requests.get("https://metals-api.com/api/latest?access_key=free&base=INR&symbols=XAU").json()
-            if "rates" in r and "XAU" in r["rates"]:
-                last = 1 / float(r["rates"]["XAU"]) * 31.1035  # convert USD/ounce
-                return last, 0.0
-
-        # CRUDE fallback (Oilprice API public mirror)
+        # ---------------------------------------------------------
+        # CRUDE fallback
+        # ---------------------------------------------------------
         if ticker == "CL=F":
-            r = requests.get("https://api.api-ninjas.com/v1/oilprice", headers={"X-Api-Key": st.secrets["oil"]["api_key"]}).json()
+            r = requests.get(
+                "https://api.api-ninjas.com/v1/oilprice",
+                headers={"X-Api-Key": st.secrets["oil"]["api_key"]}
+            ).json()
             if isinstance(r, list) and len(r) > 0:
-                last = float(r[0]["price"])
-                return last, 0.0
+                return float(r[0]["price"]), 0.0
 
         return None, None
 
     except Exception as e:
         print("MACRO ERROR:", ticker, e)
         return None, None
+
 
 
 st.markdown("<h3 style='color:white; margin-top:25px;'>📈 Macro Indicators</h3>", unsafe_allow_html=True)
