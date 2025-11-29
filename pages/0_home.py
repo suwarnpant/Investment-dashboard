@@ -30,7 +30,7 @@ def get_unsplash_image():
         return img + f"&t={datetime.now().timestamp()}"
 
     except:
-        return "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee"
+        return 0
 
 
 bg_url = get_unsplash_image()
