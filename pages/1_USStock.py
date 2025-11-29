@@ -52,16 +52,18 @@ df["pnl_%"] = (
 # LLM Signal Generation
 # ------------------------------------------
 @st.cache_data(ttl=900)
-def get_llm_signal(
-    asset_name,
-    ticker,
-    thesis,
-    units,
-    avg_price,
-    current_price,
-    high_52,
-    low_52
-):
+def get_llm_signal(row):
+    return analyze_thesis(
+        asset=row["asset_name"],
+        ticker=row["ticker"],
+        thesis=row["thesis"],
+        units=float(row["units"]),
+        avg_price=float(row["avg_price"]),
+        price=float(row["current_price"]),
+        high52=float(row["52w_high"]),
+        low52=float(row["52w_low"]),
+        api_key=st.secrets["openai"]["api_key"],
+    ):
     """
     Wraps analyze_thesis so it can use all key inputs.
     Expected to return a dict:
