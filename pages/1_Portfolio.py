@@ -16,4 +16,4 @@ total_pnl = df['pnl'].sum()
 st.metric("Total Portfolio Value", f"${total_value:,.2f}")
 st.metric("Total P/L", f"${total_pnl:,.2f}")
 
-st.autorefresh(interval=900000)  # 15 mins
+
