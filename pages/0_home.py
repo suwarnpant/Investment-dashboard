@@ -19,7 +19,7 @@ def get_unsplash_image():
         # UPDATED QUERY → calm minimal dark abstract
         url = (
             "https://api.unsplash.com/photos/random"
-            "?query=minimal dark abstract gradient"
+            "?query=minimal dark abstract"
             "&orientation=landscape"
             f"&client_id={UNSPLASH_API_KEY}"
         )
