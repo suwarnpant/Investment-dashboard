@@ -26,4 +26,3 @@ for name, signal in signals:
     st.write(signal)
     st.write("---")
 
-st.autorefresh(interval=900000)
