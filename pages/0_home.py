@@ -170,11 +170,11 @@ MACROS = {
     ),
     "Nasdaq 100": (
         "^NDX",
-        "https://static.vecteezy.com/system/resources/previews/020/975/568/original/nasdaq-logo-icon-free-png.png"
+        "https://images.seeklogo.com/logo-png/42/1/nasdaq-logo-png_seeklogo-426643.png"
     ),
     "Hang Seng": (
         "^HSI",
-        "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Hang_Seng_Bank_logo.svg/256px-Hang_Seng_Bank_logo.svg.png"
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQondjn-eCA_xCRsB7Tw3D79fmSOoTW-WXmIg&s"
     ),
     "BTC/USD": (
         "BTC-USD",
