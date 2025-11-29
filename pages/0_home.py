@@ -200,71 +200,52 @@ def fetch_macro(ticker):
         # Try Yahoo Finance first
         data = yf.Ticker(ticker).history(period="5d", interval="1d")
 
-        if len(data) >= 2:
-            last = float(data["Close"].iloc[-1])
-            prev = float(data["Close"].iloc[-2])
-            pct = (last - prev) / prev * 100
-
-            # If NOT gold, return directly
-            if ticker != "GC=F":
+        # ======================================================
+        # 1) STANDARD TICKER HANDLING (ALL EXCEPT GOLD)
+        # ======================================================
+        if ticker != "GC=F":
+            if len(data) >= 2:
+                last = float(data["Close"].iloc[-1])
+                prev = float(data["Close"].iloc[-2])
+                pct = (last - prev) / prev * 100
                 return last, pct
+            return None, None
 
-        # ---------------------------------------------------------
-        # SPECIAL HANDLING FOR GOLD → Convert to INR per 10 grams
-        # ---------------------------------------------------------
-        if ticker == "GC=F":
-            # Step 1: Get gold price (fallback via Metals API)
-            try:
-                r = requests.get(
-                    "https://metals-api.com/api/latest?access_key=free&base=USD&symbols=XAU"
-                ).json()
+        # ======================================================
+        # 2) SPECIAL HANDLING FOR GOLD (GC=F)
+        # ======================================================
 
-                if "rates" in r and "XAU" in r["rates"]:
-                    usd_per_ounce = 1 / float(r["rates"]["XAU"]) * 31.1035
-                else:
-                    # fallback if API fails: use Yahoo (if available)
-                    usd_per_ounce = last
+        # --- (A) Extract USD/oz values from Yahoo ---
+        if len(data) >= 2:
+            usd_today = float(data["Close"].iloc[-1])
+            usd_yesterday = float(data["Close"].iloc[-2])
+            pct_usd = (usd_today - usd_yesterday) / usd_yesterday * 100   # <<< OPTION 1
+        else:
+            usd_today = None
+            pct_usd = 0.0
 
-            except:
-                usd_per_ounce = last  # fallback
+        # --- (B) Get USDINR rate ---
+        try:
+            fx = yf.Ticker("USDINR=X").history(period="2d")
+            usdinr = float(fx["Close"].iloc[-1])
+        except:
+            usdinr = 83.0  # fallback
 
-            # Step 2: Get USD/INR rate
-            try:
-                fx_data = yf.Ticker("USDINR=X").history(period="2d")
-                usdinr = float(fx_data["Close"].iloc[-1])
-            except:
-                usdinr = 83.0  # fallback
+        # --- (C) Convert Gold: USD/oz → INR per 10g ---
+        # 1 ounce = 31.1035 grams
+        # INR per 10g = (USD/oz / 31.1035) * USDINR * 10
+        if usd_today:
+            inr_per_gram = (usd_today / 31.1035) * usdinr
+            inr_10g = inr_per_gram * 10
+            return inr_10g, pct_usd
 
-            # Step 3: Convert USD/oz → INR/10g
-            inr_per_gram = (usd_per_ounce / 31.1035) * usdinr
-            gold_inr_10g = inr_per_gram * 10
-
-            return gold_inr_10g, 0.0
-
-        # ---------------------------------------------------------
-        # BTC fallback if Yahoo fails
-        # ---------------------------------------------------------
-        if ticker == "BTC-USD":
-            r = requests.get("https://api.coindesk.com/v1/bpi/currentprice/BTC.json").json()
-            val = float(r["bpi"]["USD"]["rate_float"])
-            return val, 0.0
-
-        # ---------------------------------------------------------
-        # CRUDE fallback
-        # ---------------------------------------------------------
-        if ticker == "CL=F":
-            r = requests.get(
-                "https://api.api-ninjas.com/v1/oilprice",
-                headers={"X-Api-Key": st.secrets["oil"]["api_key"]}
-            ).json()
-            if isinstance(r, list) and len(r) > 0:
-                return float(r[0]["price"]), 0.0
-
+        # Fallback for gold if Yahoo totally fails
         return None, None
 
     except Exception as e:
         print("MACRO ERROR:", ticker, e)
         return None, None
+
 
 
 
