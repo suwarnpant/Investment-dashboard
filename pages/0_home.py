@@ -218,7 +218,7 @@ def fetch_macro(ticker):
 
         # GOLD fallback (Metals API — FREE endpoint)
         if ticker == "GC=F":
-            r = requests.get("https://metals-api.com/api/latest?access_key=free&base=USD&symbols=XAU").json()
+            r = requests.get("https://metals-api.com/api/latest?access_key=free&base=INR&symbols=XAU").json()
             if "rates" in r and "XAU" in r["rates"]:
                 last = 1 / float(r["rates"]["XAU"]) * 31.1035  # convert USD/ounce
                 return last, 0.0
