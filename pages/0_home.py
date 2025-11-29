@@ -22,6 +22,8 @@ def get_unsplash_image():
             + UNSPLASH_API_KEY
         )
 
+        print("Unsplash Response:", r)
+
         r = requests.get(url).json()
         img = r["urls"]["regular"]  # regular loads faster and never returns blank
 
