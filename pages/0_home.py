@@ -166,11 +166,11 @@ for i, (city, cid) in enumerate(cities.items()):
 MACROS = {
     "Nifty 50": (
         "^NSEI",
-        "https://images.seeklogo.com/logo-png/44/1/nifty50-logo-png_seeklogo-442646.png"
+        "https://upload.wikimedia.org/wikipedia/en/thumb/b/be/Nifty_50_Logo.svg/1200px-Nifty_50_Logo.svg.png"
     ),
     "Nasdaq 100": (
         "^NDX",
-        "https://images.seeklogo.com/logo-png/42/1/nasdaq-logo-png_seeklogo-426643.png"
+        "https://www.nasdaq.com/sites/acquia.prod/files/2020/09/24/nasdaq.jpg"
     ),
     "Hang Seng": (
         "^HSI",
