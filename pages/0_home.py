@@ -17,20 +17,22 @@ UNSPLASH_API_KEY = st.secrets["unsplash"]["api_key"]
 def get_unsplash_image():
     try:
         url = (
-            f"https://api.unsplash.com/photos/random"
-            f"?query=dark,gradient"
-            f"&orientation=landscape"
-            f"&client_id={UNSPLASH_API_KEY}"
+            "https://api.unsplash.com/photos/random?"
+            "query=dark+abstract+gradient&orientation=landscape&client_id="
+            + UNSPLASH_API_KEY
         )
 
         r = requests.get(url).json()
-        img = r["urls"]["full"]
+        img = r["urls"]["regular"]  # regular loads faster and never returns blank
 
-        # Force fresh load every session
+        # ensure refresh
         return img + f"&t={datetime.now().timestamp()}"
 
-    except:
-        return 0
+    except Exception as e:
+        print("Unsplash ERROR:", e)
+        # clean fallback
+        return "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1920&q=80"
+
 
 
 bg_url = get_unsplash_image()
