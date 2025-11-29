@@ -16,17 +16,22 @@ UNSPLASH_API_KEY = st.secrets["unsplash"]["api_key"]
 
 def get_unsplash_image():
     try:
-        # UPDATED QUERY → calm minimal dark abstract
         url = (
-            "https://api.unsplash.com/photos/random"
-            "?query=minimal dark abstract space"
-            "&orientation=landscape"
+            f"https://api.unsplash.com/photos/random"
+            f"?query=minimal,dark,abstract,gradient"
+            f"&orientation=landscape"
             f"&client_id={UNSPLASH_API_KEY}"
         )
+
         r = requests.get(url).json()
-        return r["urls"]["full"]
+        img = r["urls"]["full"]
+
+        # Force fresh load every session
+        return img + f"&t={datetime.now().timestamp()}"
+
     except:
         return "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee"
+
 
 bg_url = get_unsplash_image()
 
