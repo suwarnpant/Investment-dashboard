@@ -18,22 +18,28 @@ def get_unsplash_image():
     try:
         url = (
             "https://api.unsplash.com/photos/random?"
-            "query=dark+abstract+gradient&orientation=landscape&client_id="
+            "query=dark,abstract,gradient&orientation=landscape&client_id="
             + UNSPLASH_API_KEY
         )
 
-        print("Unsplash Response:", r)
-
         r = requests.get(url).json()
-        img = r["urls"]["regular"]  # regular loads faster and never returns blank
+        print("Unsplash Response:", r)   # <–– now 'r' exists
 
-        # ensure refresh
-        return img + f"&t={datetime.now().timestamp()}"
+        if "urls" in r:
+            img = r["urls"]["regular"]   # faster/lighter than full
+            return img + f"&t={datetime.now().timestamp()}"
+        else:
+            print("Unsplash ERROR: No URLs returned")
+            raise Exception("No image in response")
 
     except Exception as e:
         print("Unsplash ERROR:", e)
-        # clean fallback
-        return "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1920&q=80"
+        return (
+            "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee"
+            "?auto=format&fit=crop&w=1920&q=80"
+        )
+
+ 
 
 
 
