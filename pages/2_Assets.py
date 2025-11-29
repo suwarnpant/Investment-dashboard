@@ -20,13 +20,14 @@ news = fetch_news_finnhub(row['ticker'])
 
 with st.spinner("Analyzing investment thesis..."):
     analysis = analyze_thesis(
-        asset=row['asset_name'],
-        ticker=row['ticker'],
-        price=row['price'],
-        high52=row['52w_high'],
-        low52=row['52w_low'],
-        api_key=st.secrets["openai"]["api_key"]   # REQUIRED FIX
+        asset=row.get('asset_name', ''),
+        ticker=row.get('ticker', ''),
+        price=row.get('current_price', row.get('price', 0)),
+        high52=row.get('52w_high', row.get('high52', 0)),
+        low52=row.get('52w_low', row.get('low52', 0)),
+        api_key=st.secrets["openai"]["api_key"]
     )
+
 
 st.markdown("### 🧠 Investment Thesis")
 st.write(analysis)
