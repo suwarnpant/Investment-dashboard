@@ -1,45 +1,51 @@
 import streamlit as st
 import requests
+import base64
 from datetime import datetime
 import pytz
-import yfinance as yf
 
-st.set_page_config(page_title="Home", layout="wide")
+# ---------------------------------------------------------
+# PAGE CONFIG
+# ---------------------------------------------------------
+st.set_page_config(
+    page_title="Home",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
-
-# ==========================================================
-# 1) BACKGROUND — UNSPLASH MINIMAL DARK GRADIENT
-# ==========================================================
+# ---------------------------------------------------------
+# UNSPLASH BACKGROUND (BASE64 EMBED, ALWAYS WORKS)
+# ---------------------------------------------------------
 UNSPLASH_API_KEY = st.secrets["unsplash"]["api_key"]
 
-def get_unsplash_image():
+def get_bg_base64():
     try:
         url = (
             "https://api.unsplash.com/photos/random"
-            "?query=minimal dark abstract texture"
+            "?query=minimal dark gradient abstract"
             "&orientation=landscape"
         )
         headers = {"Authorization": f"Client-ID {UNSPLASH_API_KEY}"}
-        res = requests.get(url, headers=headers, timeout=10)
-        if res.status_code == 200:
-            return res.json()["urls"]["regular"]
+        r = requests.get(url, headers=headers, timeout=10)
+
+        if r.status_code == 200:
+            img_url = r.json()["urls"]["full"]
+        else:
+            img_url = "https://images.unsplash.com/photo-1522199670076-2852f80289c7"
     except:
-        pass
+        img_url = "https://images.unsplash.com/photo-1522199670076-2852f80289c7"
 
-    # fallback
-    return "https://images.unsplash.com/photo-1522199670076-2852f80289c7"
-
-
-bg_url = get_unsplash_image()
+    img_data = requests.get(img_url).content
+    encoded = base64.b64encode(img_data).decode()
+    return encoded
 
 
-# ----------------------------------------------------------
-# Inject background CSS
-# ----------------------------------------------------------
-page_bg = f"""
+bg_base64 = get_bg_base64()
+
+background_css = f"""
 <style>
 [data-testid="stAppViewContainer"] {{
-    background: url('{bg_url}') !important;
+    background: url("data:image/jpeg;base64,{bg_base64}") !important;
     background-size: cover !important;
     background-position: center !important;
     background-attachment: fixed !important;
@@ -54,132 +60,121 @@ page_bg = f"""
 }}
 
 .card {{
-    background: rgba(0, 0, 0, 0.35);
+    background: rgba(0,0,0,0.4);
     padding: 18px;
-    border-radius: 16px;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    border-radius: 14px;
     color: white;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     text-align: center;
-    margin-bottom: 20px;
 }}
 
-.logo {{
-    width: 40px;
+.macro-card {{
+    background: rgba(0,0,0,0.45);
+    padding: 18px;
+    border-radius: 12px;
+    color: white;
+    width: 160px;
+    display: inline-block;
+    margin: 8px;
+}}
+
+.macro-logo {{
+    width: 32px;
+    height: 32px;
     margin-bottom: 6px;
 }}
 </style>
 """
-st.markdown(page_bg, unsafe_allow_html=True)
+st.markdown(background_css, unsafe_allow_html=True)
 
-
-# ==========================================================
-# 2) GREETING (IST BASED)
-# ==========================================================
+# ---------------------------------------------------------
+# GREETING (IST BASED)
+# ---------------------------------------------------------
 ist = pytz.timezone("Asia/Kolkata")
-hour = datetime.now(ist).hour
+now = datetime.now(ist)
+hour = now.hour
 
 if hour < 12:
-    greet = "🌅 Good Morning"
+    greet = "Good Morning Suwarn"
 elif hour < 17:
-    greet = "🌤️ Good Afternoon"
+    greet = "Good Afternoon Suwarn"
 else:
-    greet = "🌙 Good Evening"
+    greet = "Good Evening Suwarn"
 
-st.markdown(
-    f"<h1 style='color:white;font-weight:300'>{greet}, Suwarn 👋</h1>",
-    unsafe_allow_html=True
-)
+st.markdown(f"<h1 style='color:white'>{greet}</h1>", unsafe_allow_html=True)
 
-
-# ==========================================================
-# 3) WEATHER — OPENWEATHER API
-# ==========================================================
+# ---------------------------------------------------------
+# WEATHER (4 cities)
+# ---------------------------------------------------------
 WEATHER_KEY = st.secrets["weather"]["api_key"]
-
-cities = {
-    "Pune": "Pune,IN",
-    "Mumbai": "Mumbai,IN",
-    "Ahmedabad": "Ahmedabad,IN",
-    "Haldwani": "Haldwani,IN"
-}
+cities = ["Pune", "Mumbai", "Ahmedabad", "Haldwani"]
 
 def get_weather(city):
-    try:
-        url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={WEATHER_KEY}&units=metric"
-        r = requests.get(url).json()
-        temp = r["main"]["temp"]
-        cond = r["weather"][0]["main"]
-        return round(temp, 1), cond  # single decimal
-    except:
-        return None, None
+    url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={WEATHER_KEY}&units=metric"
+    r = requests.get(url).json()
+    temp = r["main"]["temp"]
+    cond = r["weather"][0]["description"].title()
+    return temp, cond
 
+st.markdown("<h2 style='color:white'>Weather</h2>", unsafe_allow_html=True)
 
-st.markdown("<h3 style='color:white;'>🌦️ Weather</h3>", unsafe_allow_html=True)
-cols = st.columns(4)
+wcols = st.columns(len(cities))
 
-for (name, query), col in zip(cities.items(), cols):
-    temp, cond = get_weather(query)
-    temp_disp = f"{temp:.1f}°C" if temp is not None else "N/A"
-
-    col.markdown(
+for i, city in enumerate(cities):
+    temp, cond = get_weather(city)
+    wcols[i].markdown(
         f"""
         <div class="card">
-            <b>{name}</b><br>
-            {temp_disp}<br>
-            {cond if cond else ''}
+            <h3>{city}</h3>
+            <b>{temp:.1f}°C</b><br>
+            {cond}
         </div>
         """,
         unsafe_allow_html=True
     )
 
-
-# ==========================================================
-# 4) MACRO INDICATORS — YFINANCE
-# ==========================================================
-MACROS = {
-    "Nifty 50": {"ticker": "^NSEI", "logo": "https://upload.wikimedia.org/wikipedia/commons/8/89/NSE_logo.svg"},
-    "Nasdaq 100": {"ticker": "^NDX", "logo": "https://upload.wikimedia.org/wikipedia/commons/4/4a/NASDAQ_Logo.svg"},
-    "Hang Seng": {"ticker": "^HSI", "logo": "https://upload.wikimedia.org/wikipedia/commons/6/6c/Hang_Seng_Bank_logo.svg"},
-    "BTC/USD": {"ticker": "BTC-USD", "logo": "https://cryptologos.cc/logos/bitcoin-btc-logo.png"},
-    "USD/INR": {"ticker": "INR=X", "logo": "https://upload.wikimedia.org/wikipedia/commons/4/41/Flag_of_India.svg"},
-    "Gold": {"ticker": "GC=F", "logo": "https://upload.wikimedia.org/wikipedia/commons/6/6a/Gold_ingots_icon.png"},
-    "Crude Oil": {"ticker": "CL=F", "logo": "https://upload.wikimedia.org/wikipedia/commons/0/0e/Oil_barrel_icon.png"},
-}
-
-def get_macro(ticker):
+# ---------------------------------------------------------
+# MACRO INDICATORS
+# ---------------------------------------------------------
+def get_price_yf(symbol):
     try:
-        data = yf.Ticker(ticker).history(period="2d")
-        price = data["Close"].iloc[-1]
-        prev = data["Close"].iloc[-2]
-        pct = (price - prev) / prev * 100
-        return float(price), float(pct)
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d"
+        r = requests.get(url).json()
+        result = r["chart"]["result"][0]
+        price = result["meta"]["regularMarketPrice"]
+        prev = result["meta"]["chartPreviousClose"]
+        pct = ((price - prev) / prev) * 100
+        return price, pct
     except:
         return None, None
 
+indicators = [
+    ("Nifty 50", "^NSEI", "https://icons.iconarchive.com/icons/iconsmind/outline/512/Line-Chart-icon.png"),
+    ("Nasdaq 100", "^NDX", "https://cdn-icons-png.flaticon.com/512/833/833524.png"),
+    ("Hang Seng", "^HSI", "https://cdn-icons-png.flaticon.com/512/32/32213.png"),
+    ("BTC/USD", "BTC-USD", "https://cryptologos.cc/logos/bitcoin-btc-logo.png"),
+    ("Gold", "GC=F", "https://cdn-icons-png.flaticon.com/512/179/179249.png"),
+    ("Crude Oil", "CL=F", "https://cdn-icons-png.flaticon.com/512/727/727240.png"),
+    ("USD/INR", "INR=X", "https://cdn-icons-png.flaticon.com/512/2894/2894978.png"),
+]
 
-st.markdown("<br><h3 style='color:white;'>📊 Macro Indicators</h3>", unsafe_allow_html=True)
+st.markdown("<h2 style='color:white'>Macro Indicators</h2>", unsafe_allow_html=True)
 
-cols = st.columns(4)
-macro_list = list(MACROS.items())
+mcols = st.columns(4)
 
-for i, col in enumerate(cols):
-    items = macro_list[i*2 : (i+1)*2]  # 2 per column
+for i, (name, ticker, logo) in enumerate(indicators):
+    price, pct = get_price_yf(ticker)
+    color = "lightgreen" if pct and pct > 0 else "red"
+    mcols[i % 4].markdown(
+        f"""
+        <div class="macro-card">
+            <img src="{logo}" class="macro-logo"><br>
+            <b>{name}</b><br>
+            {price:.2f if price else "N/A"}<br>
+            <span style="color:{color}">{pct:+.2f}%</span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    for name, info in items:
-        price, pct = get_macro(info["ticker"])
-        price_disp = f"{price:,.2f}" if price else "N/A"
-        pct_disp = f"{pct:+.2f}%" if pct else "N/A"
-        color = "lightgreen" if pct and pct > 0 else "#ff6b6b"
-
-        col.markdown(
-            f"""
-            <div class="card">
-                <img src="{info['logo']}" class="logo"><br>
-                <b>{name}</b><br>
-                {price_disp}<br>
-                <span style="color:{color}">{pct_disp}</span>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
