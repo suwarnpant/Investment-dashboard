@@ -3,10 +3,7 @@ import requests
 import datetime
 import yfinance as yf
 
-st.set_page_config(
-    page_title="Dashboard Home",
-    layout="wide",
-)
+st.set_page_config(page_title="Home", layout="wide")
 
 # ---------------------------------------------------------
 # FETCH BACKGROUND FROM UNSPLASH
@@ -14,42 +11,55 @@ st.set_page_config(
 def get_unsplash_background():
     try:
         access_key = st.secrets["unsplash"]["access_key"]
-        query = "calm minimal gradient abstract soft subtle background"
+        query = "calm minimal gradient abstract soft background"
         url = f"https://api.unsplash.com/photos/random?query={query}&orientation=landscape&client_id={access_key}"
         data = requests.get(url).json()
-        return data["urls"]["regular"]
+        return data["urls"]["full"]
     except:
-        # fallback gradient
         return "https://images.unsplash.com/photo-1503264116251-35a269479413?auto=format&fit=crop&w=1600&q=80"
 
 bg_image = get_unsplash_background()
 
+# Background style
 st.markdown(
     f"""
     <style>
         .stApp {{
-            background: url('{bg_image}') no-repeat center center fixed;
-            background-size: cover;
+            background: url('{bg_image}') no-repeat center center fixed !important;
+            background-size: cover !important;
         }}
-        .city-card {{
-            padding: 18px;
-            border-radius: 14px;
-            background: rgba(255,255,255,0.75);
-            backdrop-filter: blur(8px);
-            box-shadow: 0px 4px 8px rgba(0,0,0,0.10);
+
+        .glass-card {{
+            padding: 20px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.3);
             text-align: center;
+            color: #ffffff;
             font-size: 18px;
-            margin: 5px;
         }}
+
         .macro-card {{
-            padding: 12px;
-            border-radius: 12px;
-            background: rgba(255,255,255,0.8);
-            backdrop-filter: blur(8px);
+            padding: 15px;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.25);
             text-align: center;
-            min-width: 140px;
-            box-shadow: 0px 4px 6px rgba(0,0,0,0.08);
+            color: #ffffff;
             font-size: 17px;
+        }}
+
+        .macro-logo {{
+            width: 32px;
+            height: 32px;
+            margin-bottom: 6px;
+        }}
+
+        .weather-logo {{
+            width: 36px;
         }}
     </style>
     """,
@@ -59,21 +69,21 @@ st.markdown(
 # ---------------------------------------------------------
 # GREETING
 # ---------------------------------------------------------
-now = datetime.datetime.now().hour
-if now < 12:
+hour = datetime.datetime.now().hour
+if hour < 12:
     greeting = "Good Morning"
-elif now < 17:
+elif hour < 17:
     greeting = "Good Afternoon"
 else:
     greeting = "Good Evening"
 
-st.markdown(f"## 👋 {greeting}, **Suwarn**")
+st.markdown(f"<h2 style='color:white;'>👋 {greeting}, Suwarn</h2>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # WEATHER SECTION
 # ---------------------------------------------------------
-WEATHER_CITIES = ["Pune", "Mumbai", "Ahmedabad", "Haldwani"]
 API_KEY = st.secrets["weather"]["api_key"]
+CITIES = ["Pune", "Mumbai", "Ahmedabad", "Haldwani"]
 
 def get_weather(city):
     try:
@@ -81,58 +91,66 @@ def get_weather(city):
         data = requests.get(url).json()
         temp = data["main"]["temp"]
         desc = data["weather"][0]["description"].title()
-        return f"{temp:.1f}°C | {desc}"
+        icon = data["weather"][0]["icon"]
+        icon_url = f"https://openweathermap.org/img/wn/{icon}@2x.png"
+        return temp, desc, icon_url
     except:
-        return "N/A"
+        return None, None, None
 
-st.markdown("### 🌦 Weather Overview")
+st.markdown("<h3 style='color:white;'>🌦 Weather</h3>", unsafe_allow_html=True)
+weather_cols = st.columns(len(CITIES))
 
-cols = st.columns(len(WEATHER_CITIES))
-for idx, city in enumerate(WEATHER_CITIES):
-    with cols[idx]:
+for i, city in enumerate(CITIES):
+    temp, desc, icon = get_weather(city)
+    with weather_cols[i]:
         st.markdown(
-            f"<div class='city-card'><b>{city}</b><br>{get_weather(city)}</div>",
+            f"""
+            <div class="glass-card">
+                <img src="{icon}" class="weather-logo">
+                <br><b>{city}</b><br>
+                {temp}°C<br>
+                {desc}
+            </div>
+            """,
             unsafe_allow_html=True
         )
 
 # ---------------------------------------------------------
 # MACRO INDICATORS
 # ---------------------------------------------------------
-st.markdown("---")
-st.markdown("### 🌍 Macro Indicators")
-
 MACROS = {
-    "Nifty 50": "^NSEI",
-    "NASDAQ 100": "^NDX",
-    "US 10Y Bond": "^TNX",
-    "India VIX": "^INDIAVIX",
-    "US VIX": "^VIX",
+    "Nifty 50": ("^NSEI", "https://upload.wikimedia.org/wikipedia/commons/3/3a/NSE_Logo.svg"),
+    "NASDAQ 100": ("^NDX", "https://upload.wikimedia.org/wikipedia/commons/7/77/NASDAQ_Logo.svg"),
+    "US 10Y Bond": ("^TNX", "https://cdn-icons-png.flaticon.com/512/711/711284.png"),
+    "India VIX": ("^INDIAVIX", "https://cdn-icons-png.flaticon.com/512/476/476700.png"),
+    "US VIX": ("^VIX", "https://cdn-icons-png.flaticon.com/512/476/476700.png"),
 }
 
 def fetch_macro(ticker):
     try:
         data = yf.Ticker(ticker).history(period="2d")
-        latest = data["Close"].iloc[-1]
+        last = data["Close"].iloc[-1]
         prev = data["Close"].iloc[-2]
-        pct = ((latest - prev) / prev) * 100
-        return latest, pct
+        pct = (last - prev) / prev * 100
+        return last, pct
     except:
         return None, None
 
+st.markdown("<h3 style='color:white; margin-top:20px;'>🌍 Macro Indicators</h3>", unsafe_allow_html=True)
 macro_cols = st.columns(len(MACROS))
-for idx, (name, ticker) in enumerate(MACROS.items()):
-    price, pct = fetch_macro(ticker)
 
-    if price is None:
-        card = f"<div class='macro-card'><b>{name}</b><br>N/A</div>"
-    else:
-        card = f"""
-        <div class='macro-card'>
-            <b>{name}</b><br>
-            {price:,.2f}<br>
-            <span style='color:{'green' if pct>0 else 'red'};'>{pct:+.2f}%</span>
-        </div>
-        """
-
-    with macro_cols[idx]:
-        st.markdown(card, unsafe_allow_html=True)
+for i, (name, (ticker, logo)) in enumerate(MACROS.items()):
+    value, pct = fetch_macro(ticker)
+    with macro_cols[i]:
+        st.markdown(
+            f"""
+            <div class="macro-card">
+                <img src="{logo}" class="macro-logo">
+                <br><b>{name}</b><br>
+                {value:,.2f if value else "N/A"}<br>
+                <span style="color:{'lightgreen' if pct and pct>0 else 'salmon'};">
+                    {pct:+.2f}%</span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
