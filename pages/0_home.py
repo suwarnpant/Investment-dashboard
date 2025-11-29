@@ -197,28 +197,45 @@ MACROS = {
 
 def fetch_macro(ticker):
     try:
-        # First attempt - 2 day history
-        data = yf.Ticker(ticker).history(period="2d")
+        # Yahoo Finance first attempt
+        data = yf.Ticker(ticker).history(period="5d", interval="1d")
+
         if len(data) >= 2:
-            last = data["Close"].iloc[-1]
-            prev = data["Close"].iloc[-2]
+            last = float(data["Close"].iloc[-1])
+            prev = float(data["Close"].iloc[-2])
             pct = (last - prev) / prev * 100
             return last, pct
 
-        # Fallback 1 — use fast_info
-        t = yf.Ticker(ticker)
-        last = t.fast_info.get("last_price")
-        prev = t.fast_info.get("previous_close")
+        # -------------------------
+        # FALLBACKS FOR SPECIAL ASSETS
+        # -------------------------
 
-        if last and prev:
-            pct = (last - prev) / prev * 100
-            return last, pct
+        # BTC fallback (Coindesk)
+        if ticker == "BTC-USD":
+            r = requests.get("https://api.coindesk.com/v1/bpi/currentprice/BTC.json").json()
+            last = float(r["bpi"]["USD"]["rate_float"])
+            return last, 0.0
 
-        # Fallback 2 — as last resort
+        # GOLD fallback (Metals API — FREE endpoint)
+        if ticker == "GC=F":
+            r = requests.get("https://metals-api.com/api/latest?access_key=free&base=USD&symbols=XAU").json()
+            if "rates" in r and "XAU" in r["rates"]:
+                last = 1 / float(r["rates"]["XAU"]) * 31.1035  # convert USD/ounce
+                return last, 0.0
+
+        # CRUDE fallback (Oilprice API public mirror)
+        if ticker == "CL=F":
+            r = requests.get("https://api.api-ninjas.com/v1/oilprice", headers={"X-Api-Key": st.secrets["oil"]["api_key"]}).json()
+            if isinstance(r, list) and len(r) > 0:
+                last = float(r[0]["price"])
+                return last, 0.0
+
         return None, None
 
-    except:
+    except Exception as e:
+        print("MACRO ERROR:", ticker, e)
         return None, None
+
 
 st.markdown("<h3 style='color:white; margin-top:25px;'>📈 Macro Indicators</h3>", unsafe_allow_html=True)
 m_cols = st.columns(len(MACROS))
