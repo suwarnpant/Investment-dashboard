@@ -8,4 +8,4 @@ macro = fetch_macro()
 for k, v in macro.items():
     st.metric(k, v)
 
-st.autorefresh(interval=900000)
+
