@@ -52,43 +52,44 @@ page_bg = f"""
     background-size: cover;
 }}
 
-.weather-card, .macro-card {
+/* -------------------------- */
+/*   NEUMORPHIC CARD STYLE    */
+/* -------------------------- */
+.weather-card, .macro-card {{
     padding: 16px;
     border-radius: 22px;
-    background: rgba(255,255,255,0.03);  /* ultra-light for transparency */
+    background: rgba(255,255,255,0.03);
     backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 
-    /* ---- Neumorphic Shadow Magic ---- */
     box-shadow:
-        8px 8px 16px rgba(0,0,0,0.45),     /* deep shadow bottom-right */
-        -8px -8px 16px rgba(255,255,255,0.04);  /* soft light top-left */
+        8px 8px 16px rgba(0,0,0,0.45),
+        -8px -8px 16px rgba(255,255,255,0.04);
 
-    /* Optional subtle gloss highlight */
     background-blend-mode: overlay;
 
     color: white;
     text-align: center;
     margin-bottom: 20px;
     transition: 0.25s ease;
-}
+}}
 
-/* Hover effect (optional but beautiful) */
-.weather-card:hover, .macro-card:hover {
+.weather-card:hover, .macro-card:hover {{
     transform: translateY(-3px);
     box-shadow:
         12px 12px 20px rgba(0,0,0,0.55),
         -12px -12px 20px rgba(255,255,255,0.05);
-}
+}}
 
+/* Logo size */
 .macro-logo {{
     width: 35px;
     height: 35px;
     margin-bottom: 8px;
 }}
-
-
 </style>
 """
+
 st.markdown(page_bg, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
