@@ -17,7 +17,7 @@ UNSPLASH_API_KEY = st.secrets["unsplash"]["api_key"]
 def get_unsplash_image():
     try:
         # curated dark-minimal collections
-        COLLECTION_ID = "1147971"   # Dark Minimal Collection
+        COLLECTION_ID = "317857"   # Dark Minimal Collection
 
         url = (
             f"https://api.unsplash.com/photos/random"
