@@ -16,28 +16,26 @@ UNSPLASH_API_KEY = st.secrets["unsplash"]["api_key"]
 
 def get_unsplash_image():
     try:
+        # curated dark-minimal collections
+        COLLECTION_ID = "1147971"   # Dark Minimal Collection
+
         url = (
-            "https://api.unsplash.com/photos/random?"
-            "query=dark,minimal&orientation=landscape&client_id="
-            + UNSPLASH_API_KEY
+            f"https://api.unsplash.com/photos/random"
+            f"?collections={COLLECTION_ID}"
+            f"&orientation=landscape"
+            f"&content_filter=high"
+            f"&client_id={UNSPLASH_API_KEY}"
         )
 
         r = requests.get(url).json()
-        print("Unsplash Response:", r)   # <–– now 'r' exists
+        img = r["urls"]["regular"]
 
-        if "urls" in r:
-            img = r["urls"]["regular"]   # faster/lighter than full
-            return img + f"&t={datetime.now().timestamp()}"
-        else:
-            print("Unsplash ERROR: No URLs returned")
-            raise Exception("No image in response")
+        # ensure refresh
+        return img + f"&t={datetime.now().timestamp()}"
 
     except Exception as e:
         print("Unsplash ERROR:", e)
-        return (
-            "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee"
-            "?auto=format&fit=crop&w=1920&q=80"
-        )
+        return "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1920&q=80"
 
  
 
