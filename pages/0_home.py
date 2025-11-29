@@ -106,12 +106,12 @@ def get_greeting():
     elif 17 <= hour < 22:
         return "Good Evening"
     else:
-        return "Good Night"
+        return "Good Evening"
 
 greet = get_greeting()
 
 st.markdown(
-    f"<h1 style='text-align:center; color:white; margin-top:-20px;'>{greet}, Suwarn 👋</h1>",
+    f"<h1 style='text-align:center; color:white; margin-top:-20px;'>{greet}, Suwarn !!!</h1>",
     unsafe_allow_html=True
 )
 
@@ -166,7 +166,7 @@ for i, (city, cid) in enumerate(cities.items()):
 MACROS = {
     "Nifty 50": (
         "^NSEI",
-        "https://static.vecteezy.com/system/resources/previews/020/975/579/original/nse-national-stock-exchange-india-logo-icon-free-png.png"
+        "https://images.seeklogo.com/logo-png/44/1/nifty50-logo-png_seeklogo-442646.png"
     ),
     "Nasdaq 100": (
         "^NDX",
