@@ -72,7 +72,7 @@ page_bg = f"""
 .weather-card {{
     padding: 12px;
     border-radius: 18px;
-    background: rgba(255,255,255,0.10);
+    background: rgba(255,255,255,0.05);
     text-align: center;
     backdrop-filter: blur(10px);
     color: white;
