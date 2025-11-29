@@ -18,7 +18,7 @@ def get_unsplash_image():
     try:
         url = (
             f"https://api.unsplash.com/photos/random"
-            f"?query=minimal,dark,abstract,gradient"
+            f"?query=dark,gradient"
             f"&orientation=landscape"
             f"&client_id={UNSPLASH_API_KEY}"
         )
