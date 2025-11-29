@@ -18,33 +18,30 @@ def get_unsplash_image():
     try:
         url = (
             f"https://api.unsplash.com/photos/random"
-            f"?query=minimal,dark,abstract,gradient"
+            f"?query=dark,gradient"
             f"&orientation=landscape"
             f"&client_id={UNSPLASH_API_KEY}"
         )
+
         r = requests.get(url).json()
         img = r["urls"]["full"]
-        return img + f"&t={datetime.now().timestamp()}"  # cache breaker
+
+        # Force fresh load every session
+        return img + f"&t={datetime.now().timestamp()}"
+
     except:
         return "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee"
 
-bg_url = get_unsplash_image()
 
-# NEW FIX → FORCE STREAMLIT TO RELOAD IMAGE EVERY RUN
-unique_class = f"bg{int(datetime.now().timestamp())}"
+bg_url = get_unsplash_image()
 
 page_bg = f"""
 <style>
-.{unique_class} {{
-    background: url("{bg_url}") no-repeat center center fixed !important;
-    background-size: cover !important;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
+[data-testid="stAppViewContainer"] {{
+    background: url("{bg_url}") no-repeat center center fixed;
+    background-size: cover;
 }}
+
 .macro-card {{
     padding: 12px;
     border-radius: 18px;
@@ -55,11 +52,13 @@ page_bg = f"""
     color: white;
     margin-bottom: 10px;
 }}
+
 .macro-logo {{
     width: 35px;
     height: 35px;
     margin-bottom: 8px;
 }}
+
 .weather-card {{
     padding: 12px;
     border-radius: 18px;
@@ -70,10 +69,7 @@ page_bg = f"""
     margin-bottom: 15px;
 }}
 </style>
-
-<div class="{unique_class}"></div>
 """
-
 st.markdown(page_bg, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
@@ -115,7 +111,7 @@ def get_weather(city_id):
     try:
         url = f"https://api.openweathermap.org/data/2.5/weather?id={city_id}&appid={OPENWEATHER_KEY}&units=metric"
         data = requests.get(url).json()
-        temp = round(data["main"]["temp"], 1)
+        temp = data["main"]["temp"]
         desc = data["weather"][0]["description"].title()
         icon = data["weather"][0]["icon"]
         icon_url = f"http://openweathermap.org/img/w/{icon}.png"
@@ -134,7 +130,7 @@ for i, (city, cid) in enumerate(cities.items()):
             <div class="weather-card">
                 <h4 style="margin-bottom:2px;">{city}</h4>
                 {'<img src="'+icon+'" width="50">' if icon else ''}
-                <div>{temp if temp else 'N/A'}°C</div>
+                <div>{f"{temp:.1f}" if temp is not None else "N/A"}°C</div>
                 <small>{desc if desc else ''}</small>
             </div>
             """,
@@ -144,23 +140,63 @@ for i, (city, cid) in enumerate(cities.items()):
 # ---------------------------------------------------------
 # MACRO INDICATORS
 # ---------------------------------------------------------
+# ---------------------------------------------------------
+# MACRO INDICATORS (FIXED: logos + BTC/Gold/Crude prices)
+# ---------------------------------------------------------
 MACROS = {
-    "Nifty 50": ("^NSEI", "https://static.vecteezy.com/system/resources/previews/020/975/579/original/nse-national-stock-exchange-india-logo-icon-free-png.png"),
-    "Nasdaq 100": ("^NDX", "https://static.vecteezy.com/system/resources/previews/020/975/568/original/nasdaq-logo-icon-free-png.png"),
-    "Hang Seng": ("^HSI", "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Hang_Seng_Bank_logo.svg/256px-Hang_Seng_Bank_logo.svg.png"),
-    "BTC/USD": ("BTC-USD", "https://cryptologos.cc/logos/bitcoin-btc-logo.png?v=031"),
-    "USD/INR": ("USDINR=X", "https://static-00.iconduck.com/assets.00/currency-exchange-dollar-rupee-icon-2048x2048-19m4kzqv.png"),
-    "Gold": ("GC=F", "https://static-00.iconduck.com/assets.00/gold-bars-icon-2048x1536-euqf6j6p.png"),
-    "Crude Oil": ("CL=F", "https://static-00.iconduck.com/assets.00/oil-barrel-icon-512x512-w5tl5p3u.png")
+    "Nifty 50": (
+        "^NSEI",
+        "https://static.vecteezy.com/system/resources/previews/020/975/579/original/nse-national-stock-exchange-india-logo-icon-free-png.png"
+    ),
+    "Nasdaq 100": (
+        "^NDX",
+        "https://static.vecteezy.com/system/resources/previews/020/975/568/original/nasdaq-logo-icon-free-png.png"
+    ),
+    "Hang Seng": (
+        "^HSI",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Hang_Seng_Bank_logo.svg/256px-Hang_Seng_Bank_logo.svg.png"
+    ),
+    "BTC/USD": (
+        "BTC-USD",
+        "https://cryptologos.cc/logos/bitcoin-btc-logo.png?v=031"
+    ),
+    "USD/INR": (
+        "USDINR=X",
+        "https://static-00.iconduck.com/assets.00/currency-exchange-dollar-rupee-icon-2048x2048-19m4kzqv.png"
+    ),
+    "Gold": (
+        "GC=F",
+        "https://static-00.iconduck.com/assets.00/gold-bars-icon-2048x1536-euqf6j6p.png"
+    ),
+    "Crude Oil": (
+        "CL=F",
+        "https://static-00.iconduck.com/assets.00/oil-barrel-icon-512x512-w5tl5p3u.png"
+    )
 }
+
 
 def fetch_macro(ticker):
     try:
+        # First attempt - 2 day history
         data = yf.Ticker(ticker).history(period="2d")
-        last = data["Close"].iloc[-1]
-        prev = data["Close"].iloc[-2]
-        pct = (last - prev) / prev * 100
-        return last, pct
+        if len(data) >= 2:
+            last = data["Close"].iloc[-1]
+            prev = data["Close"].iloc[-2]
+            pct = (last - prev) / prev * 100
+            return last, pct
+
+        # Fallback 1 — use fast_info
+        t = yf.Ticker(ticker)
+        last = t.fast_info.get("last_price")
+        prev = t.fast_info.get("previous_close")
+
+        if last and prev:
+            pct = (last - prev) / prev * 100
+            return last, pct
+
+        # Fallback 2 — as last resort
+        return None, None
+
     except:
         return None, None
 
