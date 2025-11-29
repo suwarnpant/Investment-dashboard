@@ -29,4 +29,4 @@ analysis = analyze_thesis(
 st.subheader("AI Thesis Analysis")
 st.write(analysis)
 
-st.autorefresh(interval=900000)
+
