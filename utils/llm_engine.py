@@ -2,13 +2,16 @@ import streamlit as st
 from openai import OpenAI
 import time
 
-client = OpenAI(api_key=st.secrets["openai"]["api_key"])
+# We DO NOT store OpenAI client globally (breaks Streamlit cache)
 
 @st.cache_data(show_spinner=False)
-def analyze_thesis(asset, ticker, price, high52, low52):
+def analyze_thesis(asset, ticker, price, high52, low52, api_key):
+    """
+    Streamlit-safe cached LLM function.
+    All arguments must be serializable!!
+    """
     prompt = f"""
-    You are an investment analyst.
-    Create a short thesis for the stock below:
+    You are an investment analyst. Generate a concise thesis.
 
     Asset: {asset}
     Ticker: {ticker}
@@ -20,19 +23,23 @@ def analyze_thesis(asset, ticker, price, high52, low52):
     - Bull case (2 bullets)
     - Bear case (2 bullets)
     - Key risks (1–2 lines)
-    - Whether long-term investors should BUY / HOLD / AVOID
+    - Suggested stance: BUY / HOLD / REDUCE
     """
+
+    # Create OpenAI client inside function (safe)
+    client = OpenAI(api_key=api_key)
 
     # retry logic
     for attempt in range(3):
         try:
-            resp = client.chat.completions.create(
-                model="gpt-5",
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",   # safer + higher rate limits
                 messages=[{"role": "user", "content": prompt}]
             )
-            return resp.choices[0].message["content"]
+            return response.choices[0].message["content"]
 
-        except Exception as e:
+        except Exception:
             time.sleep(2)
-    
-    return "Rate-limit hit. Please try again in a few seconds."
+
+    # fallback result
+    return "⚠️ Rate limit or API error. Try again in 30 sec."
