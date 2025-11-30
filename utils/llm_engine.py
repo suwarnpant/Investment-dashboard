@@ -2,60 +2,78 @@ import streamlit as st
 from openai import OpenAI
 import time
 
-# We DO NOT store OpenAI client globally (breaks Streamlit cache)
+# ---------------------------------------------------------
+# LLM ANALYSIS ENGINE (Streamlit-cache safe)
+# ---------------------------------------------------------
 
 @st.cache_data(show_spinner=False)
-def analyze_thesis(asset, ticker, thesis, units, avg_price, price, high52, low52, api_key):
+def analyze_thesis(asset, ticker, thesis, units, avg_price, price, high52, low52):
     """
-    Streamlit-safe cached LLM function.
-    All arguments must be serializable!!
-    Returns: markdown string with commentary + stance + signals.
+    AI-based thesis review for your portfolio.
+    Cached for performance. All arguments must be serializable.
     """
+
+    # Safety for empty thesis
+    if thesis is None or str(thesis).strip() == "":
+        thesis = "No thesis provided."
+
+    # Strong improved prompt (based on your latest instructions)
     prompt = f"""
-You are an investment analyst. Critically review my current stock thesis and position.
+You are my personal investment analyst. Evaluate this position logically and concisely.
 
-Asset: {asset}
-Ticker: {ticker}
-Units held: {units}
-Average buy price: {avg_price}
-Current price: {price}
-52W High: {high52}
-52W Low: {low52}
-Current thesis: "{thesis}"
+ASSET: {asset}
+TICKER: {ticker}
+UNITS HELD: {units}
+AVERAGE BUY PRICE: {avg_price}
+CURRENT PRICE: {price}
+52W HIGH: {high52}
+52W LOW: {low52}
 
-Please provide:
+CURRENT THESIS:
+{thesis}
 
-1. Commentary (3–4 lines) – Does the thesis still broadly hold at the current price? 
-   Comment on valuation vs my buy level and the 52W range.
-2. Suggested thesis changes (3–5 bullet points) – How should I update/refine my thesis 
-   in light of recent developments, risks or competitive shifts?
-3. Stance – One clear tag in ALL CAPS: BUY / HOLD / TRIM / EXIT, plus one short 
-   sentence of justification.
-4. Signals to monitor – 3–5 specific data points, KPIs or events that would either 
-   confirm or break the thesis.
+TASK:
+1. **Commentary** (3–4 sentences)  
+   - Does the thesis broadly still hold?  
+   - Evaluate valuation vs my buy level and vs the 52W range.
 
-Respond in clean markdown, using sections:
+2. **Thesis Update Suggestions**  
+   Give 3–5 bullet points on how the thesis should evolve  
+   (risks, catalysts, competitive changes, macro effects).
 
-- Commentary
-- Suggested changes
-- Stance
-- Signals to monitor
-""".strip()
+3. **Action Signal (VERY IMPORTANT)**  
+   Output a single tag in ALL CAPS:  
+   **ACCUMULATE / HOLD / TRIM / EXIT**  
+   + A one-sentence justification.
 
-    # Create OpenAI client inside function (safe for Streamlit)
-    client = OpenAI(api_key=api_key)
+4. **Signals to Monitor (3–5 bullets)**  
+   Specific KPIs, catalysts, red flags or data points  
+   that could strengthen or break the thesis.
 
-    # retry logic
+Be concise. Respond only in clean markdown using sections:
+
+### Commentary
+### Suggested changes
+### Stance
+### Signals to monitor
+    """
+
+    # Initialize OpenAI client — do NOT store globally
+    client = OpenAI(api_key=st.secrets["openai"]["api_key"])
+
+    # Retry logic (stable for Streamlit Cloud)
     for attempt in range(3):
         try:
             response = client.chat.completions.create(
-                model="gpt-4o-mini",   # safer + higher rate limits
+                model="gpt-5",   # You asked to use “current model”
                 messages=[{"role": "user", "content": prompt}]
             )
+            # Clean extraction
             return response.choices[0].message["content"]
 
-        except Exception:
+        except Exception as e:
+            print("LLM ERROR:", e)
             time.sleep(2)
 
-    # fallback result
-    return "⚠️ Rate limit or API error. Try again in 30 sec."
+    # Final fallback
+    return "⚠️ LLM temporarily unavailable. Please retry in 30 seconds."
