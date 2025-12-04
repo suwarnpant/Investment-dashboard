@@ -201,15 +201,12 @@ def fetch_macro(ticker):
         if ticker == "GOLD_INR":
             try:
                 # USD/oz from Metals.live
-                gold_api = "https://api.metals.live/v1/spot/gold"
+                gold_api = "https://api.metalpriceapi.com/v1/latest?api_key=6299316948900caacac7dc9f57d0466b&base=USD&currencies=XAU"
                 gold_price = requests.get(gold_api).json()[0]  # USD per oz
                 print(gold_price)
                 # Fetch USDINR
-                try:
-                    fx = yf.Ticker("USDINR=X").history(period="2d")
-                    usdinr = float(fx["Close"].iloc[-1])
-                except:
-                    usdinr = 83.0  # fallback
+                usdinr = 88
+                
 
                 # Convert USD/oz → INR per 10 grams
                 inr_per_gram = (gold_price / 31.1035) * usdinr
