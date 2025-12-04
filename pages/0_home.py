@@ -182,7 +182,7 @@ MACROS = {
         "USDINR=X",
         "https://p7.hiclipart.com/preview/309/810/323/indian-rupee-sign-computer-icons-currency-symbol-icon-design-rupee.jpg"
     ),
-    "Gold": ("GC=F", "https://png.pngtree.com/png-vector/20200615/ourmid/pngtree-physical-gold-bar-cartoon-golden-vector-png-image_2256034.jpg"
+    "Gold": ("GC%3DF", "https://png.pngtree.com/png-vector/20200615/ourmid/pngtree-physical-gold-bar-cartoon-golden-vector-png-image_2256034.jpg"
     ),
     
     "Crude Oil": (
