@@ -182,7 +182,7 @@ MACROS = {
         "USDINR=X",
         "https://p7.hiclipart.com/preview/309/810/323/indian-rupee-sign-computer-icons-currency-symbol-icon-design-rupee.jpg"
     ),
-    "Gold": ("GC%3DF", "https://png.pngtree.com/png-vector/20200615/ourmid/pngtree-physical-gold-bar-cartoon-golden-vector-png-image_2256034.jpg"
+    "Gold": ("GC=F", "https://png.pngtree.com/png-vector/20200615/ourmid/pngtree-physical-gold-bar-cartoon-golden-vector-png-image_2256034.jpg"
     ),
     
     "Crude Oil": (
@@ -194,52 +194,54 @@ MACROS = {
 
 def fetch_macro(ticker):
     try:
-        # --------------------------
-        # SPECIAL CASE: GOLD (use XAUUSD)
-        # --------------------------
+        # ----------------------------------------------------
+        # 1) GOLD (Use Metals.live API instead of Yahoo)
+        # ----------------------------------------------------
         if ticker == "GC=F":
-            # Use spot gold instead of COMEX future
-            gold = yf.Ticker("XAUUSD=X").history(period="5d")
-            fx = yf.Ticker("USDINR=X").history(period="5d")
+            try:
+                gold_data = requests.get("https://api.metals.live/v1/spot/gold").json()
+                usd_price = gold_data[0]  # price per oz in USD
 
-            if len(gold) >= 2 and len(fx) >= 1:
-                usd_today = float(gold["Close"].iloc[-1])
-                usd_yesterday = float(gold["Close"].iloc[-2])
-                pct_change = (usd_today - usd_yesterday) / usd_yesterday * 100
-
+                # fetch USDINR
+                fx = yf.Ticker("USDINR=X").history(period="2d")
                 usdinr = float(fx["Close"].iloc[-1])
 
                 # convert USD/oz → INR per 10g
-                inr_per_gram = (usd_today / 31.1035) * usdinr
+                inr_per_gram = (usd_price / 31.1035) * usdinr
                 inr_10g = inr_per_gram * 10
 
-                return inr_10g, pct_change
+                return inr_10g, 0.0  # Metals API does not give % change
+            except Exception as e:
+                print("Gold Error:", e)
+                return None, None
 
-            return None, None
-
-        # --------------------------
-        # SPECIAL CASE: CRUDE OIL
-        # --------------------------
+        # ----------------------------------------------------
+        # 2) CRUDE OIL (Use api-ninjas commodity API)
+        # ----------------------------------------------------
         if ticker == "CL=F":
-            df = yf.Ticker("CL=F").history(period="5d")
-            if df.empty:
-                df = yf.Ticker("BZ=F").history(period="5d")  # fallback: Brent
+            try:
+                headers = {"X-Api-Key": st.secrets["ninjas"]["api_key"]}
+                url = "https://api.api-ninjas.com/v1/commodities?name=crude oil"
+                crude_data = requests.get(url, headers=headers).json()
 
-            if len(df) >= 2:
-                last = float(df["Close"].iloc[-1])
-                prev = float(df["Close"].iloc[-2])
-                pct = (last - prev) / prev * 100
-                return last, pct
+                if crude_data:
+                    price = crude_data[0]["price"]
+                    change_pct = crude_data[0].get("price_change_pct", 0.0)
+                    return price, change_pct
 
-            return None, None
+                return None, None
 
-        # --------------------------
-        # STANDARD CASE (all other macros)
-        # --------------------------
-        df = yf.Ticker(ticker).history(period="5d")
-        if len(df) >= 2:
-            last = float(df["Close"].iloc[-1])
-            prev = float(df["Close"].iloc[-2])
+            except Exception as e:
+                print("Crude Error:", e)
+                return None, None
+
+        # ----------------------------------------------------
+        # 3) OTHER MACROS → still use Yahoo Finance
+        # ----------------------------------------------------
+        data = yf.Ticker(ticker).history(period="5d")
+        if len(data) >= 2:
+            last = float(data["Close"].iloc[-1])
+            prev = float(data["Close"].iloc[-2])
             pct = (last - prev) / prev * 100
             return last, pct
 
