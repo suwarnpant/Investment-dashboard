@@ -235,24 +235,41 @@ def fetch_macro(ticker):
         # ----------------------------------------------------
         # 2) CRUDE OIL (api-ninjas → cleaner + more reliable)
         # ----------------------------------------------------
-        if ticker == "CRUDE":
+        if ticker == "CRUDE_INR":
             try:
-                headers = {"X-Api-Key": st.secrets["ninjas"]["api_key"]}
-                url = "https://api.api-ninjas.com/v1/commodities?name=crude oil"
+                crude = yf.Ticker("CL=F").history(period="1mo", interval="1d")
 
-                crude_data = requests.get(url, headers=headers).json()
+                if crude is None or crude.empty:
+                    print("Crude history empty")
+                    return None, None
 
-                if crude_data and isinstance(crude_data, list):
-                    price = crude_data[0].get("price")
-                    pct_change = crude_data[0].get("price_change_pct", 0)
-                    return price, pct_change
+                usd_today = float(crude["Close"].iloc[-1])
 
-                return None, None
+                if len(crude) > 1:
+                    usd_prev = float(crude["Close"].iloc[-2])
+                else:
+                    usd_prev = usd_today
+
+                pct_change = (usd_today - usd_prev) / usd_prev * 100
+
+                # USDINR
+                fx = yf.Ticker("USDINR=X").history(period="5d")
+                if fx is None or fx.empty:
+                    usdinr = 83.0
+                else:
+                    usdinr = float(fx["Close"].iloc[-1])
+
+                # Convert crude USD/barrel → INR/barrel
+                inr_price = usd_today * usdinr
+
+                return inr_price, pct_change
 
             except Exception as e:
-                print("CRUDE API ERROR:", e)
+                print("CRUDE ERROR:", e)
                 return None, None
-
+        
+        
+        
         # ----------------------------------------------------
         # 3) ALL OTHER MACROS → Yahoo Finance
         # ----------------------------------------------------
