@@ -182,7 +182,7 @@ MACROS = {
         "USDINR=X",
         "https://s3-symbol-logo.tradingview.com/indices/usd-inr--600.png"
     ),
-    "Gold": ("GOLD_INR", "https://img.freepik.com/premium-psd/design-mockup-with-gold-logo-leather_310696-18.jpg"
+    "Gold": ("GOLD_INR", "https://static.vecteezy.com/system/resources/thumbnails/050/138/921/small/three-gold-bars-stacked-over-black-background-neon-sign-vector.jpg"
     ),
     
     "Crude Oil": (
