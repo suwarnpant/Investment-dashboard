@@ -194,38 +194,46 @@ MACROS = {
 
 def fetch_macro(ticker):
     try:
-
         # ----------------------------------------------------
-        # 1) GOLD (Use Metals.live API → INR per 10g)
+        # 1) GOLD (INR per 10g using MetalPriceAPI)
         # ----------------------------------------------------
         if ticker == "GOLD_INR":
             try:
                 url = "https://api.metalpriceapi.com/v1/latest"
                 params = {
-                "api_key": "6299316948900caacac7dc9f57d0466b",
-                "base": "USD",
-                "currencies": "XAU"
+                    "api_key": "6299316948900caacac7dc9f57d0466b",
+                    "base": "USD",
+                    "currencies": "XAU"
                 }
 
                 r = requests.get(url, params=params).json()
 
+                # --- USD Gold Spot per Ounce ---
                 if "rates" in r and "USDXAU" in r["rates"]:
-                    return r["rates"]["USDXAU"]   # USD per oz
-                return None
-                
+                    usd_per_oz = float(r["rates"]["USDXAU"])
+                else:
+                    return None, None
 
-                # Convert USD/oz → INR per 10 grams
-                inr_per_gram = (gold_price / 31.1035) * 88
-                inr_per_10g = inr_per_gram * 10
+                # --- USDINR rate ---
+                try:
+                    fx = yf.Ticker("USDINR=X").history(period="2d")
+                    usdinr = float(fx["Close"].iloc[-1])
+                except:
+                    usdinr = 83.0  # fallback INR
 
-                return inr_per_10g, None  # Metals API doesn't return % change
+                # --- Convert USD/oz → INR per 10g ---
+                inr_per_gram = (usd_per_oz / 31.1035) * usdinr
+                inr_10g = inr_per_gram * 10
+
+                # No reliable % from API → use 0 or None
+                return inr_10g, None
 
             except Exception as e:
                 print("GOLD API ERROR:", e)
                 return None, None
 
         # ----------------------------------------------------
-        # 2) CRUDE OIL (Use Api-Ninjas)
+        # 2) CRUDE OIL (API-Ninja)
         # ----------------------------------------------------
         if ticker == "CRUDE":
             try:
@@ -236,8 +244,8 @@ def fetch_macro(ticker):
 
                 if crude_data:
                     price = crude_data[0]["price"]
-                    change_pct = crude_data[0].get("price_change_pct", 0.0)
-                    return price, change_pct
+                    pct = crude_data[0].get("price_change_pct", 0.0)
+                    return price, pct
 
                 return None, None
 
@@ -246,9 +254,10 @@ def fetch_macro(ticker):
                 return None, None
 
         # ----------------------------------------------------
-        # 3) ALL OTHER MACROS → Yahoo Finance
+        # 3) ALL OTHER MACROS (Yahoo Finance)
         # ----------------------------------------------------
         data = yf.Ticker(ticker).history(period="5d")
+
         if len(data) >= 2:
             last = float(data["Close"].iloc[-1])
             prev = float(data["Close"].iloc[-2])
@@ -260,6 +269,7 @@ def fetch_macro(ticker):
     except Exception as e:
         print("MACRO ERROR:", ticker, e)
         return None, None
+
 
 
 
