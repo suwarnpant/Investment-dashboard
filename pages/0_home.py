@@ -292,6 +292,58 @@ def fetch_macro(ticker):
         return None, None
 
 
+# ---------------------------------------------------------
+# MACRO SUMMARY HELPERS
+# ---------------------------------------------------------
+def get_last_change(ticker):
+    """
+    Fetch last 2 closes and compute % change.
+    """
+    try:
+        data = yf.Ticker(ticker).history(period="3d")
+        if len(data) < 2:
+            return None, None, None
+
+        last = float(data["Close"].iloc[-1])
+        prev = float(data["Close"].iloc[-2])
+        pct = (last - prev) / prev * 100
+        return last, prev, pct
+    except:
+        return None, None, None
+
+
+def generate_macro_summary(snapshot):
+    """
+    Uses LLM to generate a clean English summary.
+    """
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=st.secrets["openai"]["api_key"])
+
+        prompt = f"""
+You are a global macro strategist. Write a concise, high-quality daily macro summary.
+Use ONLY the data below:
+
+{snapshot}
+
+Format the output as:
+- Key movement
+- Direction
+- Impact on sentiment
+- Risk-on/off tone
+    
+Keep the summary to 5–7 bullet points.
+"""
+
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return resp.choices[0].message["content"]
+
+    except Exception as e:
+        print("Macro Summary Error:", e)
+        return "Macro summary unavailable today."
 
 
 st.markdown("<h3 style='color:white; margin-top:25px;'>📈 Macro Indicators</h3>", unsafe_allow_html=True)
@@ -316,3 +368,44 @@ for i, (name, (ticker, logo)) in enumerate(MACROS.items()):
             """,
             unsafe_allow_html=True
         )
+# ---------------------------------------------------------
+# DAILY MACRO SUMMARY SECTION
+# ---------------------------------------------------------
+st.markdown("<h3 style='color:white; margin-top:35px;'>📰 Daily Macro Summary</h3>", unsafe_allow_html=True)
+
+# Select high-impact macros for summary
+MACRO_SET = {
+    "US 10Y Yield": "^TNX",
+    "VIX": "^VIX",
+    "Dollar Index (DXY)": "DX-Y.NYB",
+    "Crude Oil": "CL=F",
+    "Gold": "GC=F",
+    "S&P 500": "^GSPC",
+    "Nasdaq 100": "^NDX"
+}
+
+# Fetch last movements
+snapshot = {}
+
+for name, ticker in MACRO_SET.items():
+    last, prev, pct = get_last_change(ticker)
+    snapshot[name] = {
+        "latest": last,
+        "previous": prev,
+        "pct_change": pct
+    }
+
+# Generate AI summary
+summary = generate_macro_summary(snapshot)
+
+# Display in neumorphic card (using your existing style)
+st.markdown(
+    f"""
+    <div class="weather-card">
+        <div style="text-align:left; color:white; font-size:16px;">
+            {summary}
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
