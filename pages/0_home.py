@@ -166,7 +166,7 @@ MACROS = {
         "^NSEI",
         "https://upload.wikimedia.org/wikipedia/en/thumb/b/be/Nifty_50_Logo.svg/1200px-Nifty_50_Logo.svg.png"
     ),
-    "Nasdaq 100": (
+    "Nasdaq ": (
         "^NDX",
         "https://www.nasdaq.com/sites/acquia.prod/files/2020/09/24/nasdaq.jpg"
     ),
@@ -187,7 +187,7 @@ MACROS = {
     
     "Crude Oil": (
         "CRUDE",
-        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ7YJgVc8O5qY-yXfiWBJUtJo0i0Dsf0fARzg&s"
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQpXtOOhMFHRVBhLgUi5nliSWrD-CNrOcmtTA&s"
     )
 }
 
