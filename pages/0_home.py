@@ -180,9 +180,9 @@ MACROS = {
     ),
     "USD/INR": (
         "USDINR=X",
-        "https://p7.hiclipart.com/preview/309/810/323/indian-rupee-sign-computer-icons-currency-symbol-icon-design-rupee.jpg"
+        "https://s3-symbol-logo.tradingview.com/indices/usd-inr--600.png"
     ),
-    "Gold": ("GOLD_INR", "https://png.pngtree.com/png-vector/20200615/ourmid/pngtree-physical-gold-bar-cartoon-golden-vector-png-image_2256034.jpg"
+    "Gold": ("GOLD_INR", "https://toppng.com/uploads/preview/gold-bar-png-11552734016caqxhj0wz5.png"
     ),
     
     "Crude Oil": (
