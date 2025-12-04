@@ -223,7 +223,7 @@ def build_clean_macro_snapshot(raw):
 
 clean_snapshot = build_clean_macro_snapshot(macro_snapshot)
 
-st.markdown("<h3 style='color:white; margin-top:25px;'>📰 Macro Summary</h3>", unsafe_allow_html=True)
+#st.markdown("<h3 style='color:white; margin-top:25px;'>📰 Macro Summary</h3>", unsafe_allow_html=True)
 # ---------------------------------------------------------
 # LLM MACRO ANALYSIS
 # ---------------------------------------------------------
@@ -298,7 +298,7 @@ else:
         direction = "▲" if pct > 0 else "▼" if pct < 0 else "•"
         lines.append(f"**{name}** {direction} {pct:+.2f}%")
 
-    st.markdown(
+  #  st.markdown(
         f"""
         <div class="macro-card" style="padding:20px; font-size:18px;">
             {'<br>'.join(lines)}
