@@ -191,100 +191,76 @@ MACROS = {
     )
 }
 
+
 def fetch_macro(ticker):
     try:
 
         # ----------------------------------------------------
-        # 1) GOLD (GC=F → Convert USD/oz → INR per 10g)
+        # 1) GOLD (Yahoo Finance — GC=F → convert to INR/10g)
         # ----------------------------------------------------
         if ticker == "GOLD_INR":
             try:
-                gold = yf.Ticker("GC=F").history(period="1mo", interval="1d")
+                gold = yf.Ticker("GC=F").history(period="5d")
 
-                if gold is None or gold.empty:
-                    print("Gold history empty")
+                if gold.empty or len(gold) < 2:
+                    print("Gold empty")
                     return None, None
 
-                # always works even if only 1 row exists
                 usd_today = float(gold["Close"].iloc[-1])
+                usd_prev = float(gold["Close"].iloc[-2])
 
-                if len(gold) > 1:
-                    usd_prev = float(gold["Close"].iloc[-2])
-                else:
-                    usd_prev = usd_today  # → avoids out-of-bounds, gives 0% change
+                # % change in USD
+                pct = (usd_today - usd_prev) / usd_prev * 100
 
-                pct_change = (usd_today - usd_prev) / usd_prev * 100
-
-                # USD → INR conversion
+                # Get USD/INR
                 fx = yf.Ticker("USDINR=X").history(period="5d")
-                if fx is not None and not fx.empty:
-                    usdinr = float(fx["Close"].iloc[-1])
-                else:
-                    usdinr = 83.0  # fallback
-
-                # Convert USD/oz → INR per 10g
-                inr_per_gram = (usd_today / 31.1035) * usdinr
-                inr_10g = inr_per_gram * 10
-
-                return inr_10g, pct_change
-
-            except Exception as e:
-                print("GOLD ERROR:", e)
-                return None, None
-
-        # ----------------------------------------------------
-        # 2) CRUDE OIL (api-ninjas → cleaner + more reliable)
-        # ----------------------------------------------------
-        if ticker == "CRUDE_INR":
-            try:
-                crude = yf.Ticker("CL=F").history(period="1mo", interval="1d")
-
-                if crude is None or crude.empty:
-                    print("Crude history empty")
-                    return None, None
-
-                usd_today = float(crude["Close"].iloc[-1])
-
-                if len(crude) > 1:
-                    usd_prev = float(crude["Close"].iloc[-2])
-                else:
-                    usd_prev = usd_today
-
-                pct_change = (usd_today - usd_prev) / usd_prev * 100
-
-                # USDINR
-                fx = yf.Ticker("USDINR=X").history(period="5d")
-                if fx is None or fx.empty:
+                if fx.empty:
                     usdinr = 83.0
                 else:
                     usdinr = float(fx["Close"].iloc[-1])
 
-                # Convert crude USD/barrel → INR/barrel
-                inr_price = usd_today * usdinr
+                # Convert USD → INR (per 10 grams)
+                # 1 ounce = 31.1035 grams
+                inr_per_gram = (usd_today / 31.1035) * usdinr
+                inr_10g = inr_per_gram * 10
 
-                return inr_price, pct_change
+                return inr_10g, pct
 
             except Exception as e:
-                print("CRUDE ERROR:", e)
+                print("Gold error:", e)
                 return None, None
-        
-        
-        
+
         # ----------------------------------------------------
-        # 3) ALL OTHER MACROS → Yahoo Finance
+        # 2) CRUDE OIL (Yahoo Finance — CL=F)
+        # ----------------------------------------------------
+        if ticker == "CRUDE":
+            try:
+                crude = yf.Ticker("CL=F").history(period="5d")
+
+                if crude.empty or len(crude) < 2:
+                    print("Crude empty")
+                    return None, None
+
+                last = float(crude["Close"].iloc[-1])
+                prev = float(crude["Close"].iloc[-2])
+                pct = (last - prev) / prev * 100
+
+                return last, pct
+
+            except Exception as e:
+                print("Crude error:", e)
+                return None, None
+
+        # ----------------------------------------------------
+        # 3) All Other Macros → Standard Yahoo Finance
         # ----------------------------------------------------
         data = yf.Ticker(ticker).history(period="5d")
 
-        if data is None or data.empty:
+        if data.empty or len(data) < 2:
             return None, None
 
         last = float(data["Close"].iloc[-1])
-
-        if len(data) > 1:
-            prev = float(data["Close"].iloc[-2])
-        else:
-            prev = last  # → avoid crash
-
+        prev = float(data["Close"].iloc[-2])
         pct = (last - prev) / prev * 100
 
         return last, pct
@@ -293,8 +269,6 @@ def fetch_macro(ticker):
         print("MACRO ERROR:", ticker, e)
         return None, None
 
-
-     
 
 
 
