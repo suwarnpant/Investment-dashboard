@@ -312,6 +312,34 @@ def get_last_change(ticker):
         return None, None, None
 
 
+def build_clean_macro_snapshot(macro_dict):
+    """
+    Remove indicators where latest/previous are None.
+    This prevents summary generation failure.
+    """
+    clean = {}
+    for name, values in macro_dict.items():
+        if not values:
+            continue
+
+        latest = values.get("latest")
+        previous = values.get("previous")
+        pct = values.get("pct_change")
+
+        # Skip unusable entries
+        if latest is None or previous is None:
+            continue
+
+        clean[name] = {
+            "latest": latest,
+            "previous": previous,
+            "pct_change": pct
+        }
+
+    return clean
+
+
+
 def generate_macro_summary(snapshot):
     """
     Uses LLM to generate a clean English summary.
@@ -397,7 +425,15 @@ for name, ticker in MACRO_SET.items():
 st.write("DEBUG SNAPSHOT:", snapshot)
 
 # Generate AI summary
-summary = generate_macro_summary(snapshot)
+clean_snapshot = build_clean_macro_snapshot(macro_snapshot)
+
+if not clean_snapshot:
+    st.warning("Macro summary unavailable today.")
+else:
+    with st.spinner("Generating macro summary…"):
+        summary = analyze_macro(clean_snapshot, api_key=st.secrets["openai"]["api_key"])
+        st.markdown(summary)
+
 
 # Display in neumorphic card (using your existing style)
 st.markdown(
