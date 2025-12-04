@@ -200,28 +200,28 @@ def fetch_macro(ticker):
         # -------------------------
 # GOLD (INR per 10g)
 # -------------------------
-if ticker == "GOLD_INR":
-    try:
-        # Get USD/oz
-        gold_api = "https://api.metals.live/v1/spot/gold"
-        gold_price = requests.get(gold_api).json()[0]  # USD per oz
-
-        # USDINR
-        try:
-            fx = yf.Ticker("USDINR=X").history(period="2d")
-            usdinr = float(fx["Close"].iloc[-1])
-        except:
-            usdinr = 83.0  # fallback
-
-        # Convert: USD/oz → INR per 10g
-        INR_per_gram = (gold_price / 31.1035) * usdinr
-        INR_10g = INR_per_gram * 10
-
-        return INR_10g, None  # Metals API does not give % change
-
-    except Exception as e:
-        print("GOLD API ERROR:", e)
-        return None, None
+        if ticker == "GOLD_INR":
+            try:
+                # Get USD/oz
+                gold_api = "https://api.metals.live/v1/spot/gold"
+                gold_price = requests.get(gold_api).json()[0]  # USD per oz
+        
+                # USDINR
+                try:
+                    fx = yf.Ticker("USDINR=X").history(period="2d")
+                    usdinr = float(fx["Close"].iloc[-1])
+                except:
+                    usdinr = 83.0  # fallback
+        
+                # Convert: USD/oz → INR per 10g
+                INR_per_gram = (gold_price / 31.1035) * usdinr
+                INR_10g = INR_per_gram * 10
+        
+                return INR_10g, None  # Metals API does not give % change
+        
+            except Exception as e:
+                print("GOLD API ERROR:", e)
+                return None, None
 
 
         # ----------------------------------------------------
