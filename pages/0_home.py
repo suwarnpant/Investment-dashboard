@@ -203,7 +203,7 @@ def fetch_macro(ticker):
                 # USD/oz from Metals.live
                 gold_api = "https://api.metals.live/v1/spot/gold"
                 gold_price = requests.get(gold_api).json()[0]  # USD per oz
-
+                print(gold_price)
                 # Fetch USDINR
                 try:
                     fx = yf.Ticker("USDINR=X").history(period="2d")
