@@ -394,6 +394,7 @@ for name, ticker in MACRO_SET.items():
         "previous": prev,
         "pct_change": pct
     }
+st.write("DEBUG SNAPSHOT:", snapshot)
 
 # Generate AI summary
 summary = generate_macro_summary(snapshot)
