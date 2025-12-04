@@ -195,49 +195,55 @@ MACROS = {
 
 def fetch_macro(ticker):
     try:
-        # Try Yahoo Finance first
-        data = yf.Ticker(ticker).history(period="5d", interval="1d")
+        # --------------------------
+        # SPECIAL CASE: GOLD (use XAUUSD)
+        # --------------------------
+        if ticker == "GC=F":
+            # Use spot gold instead of COMEX future
+            gold = yf.Ticker("XAUUSD=X").history(period="5d")
+            fx = yf.Ticker("USDINR=X").history(period="5d")
 
-        # ======================================================
-        # 1) STANDARD TICKER HANDLING (ALL EXCEPT GOLD)
-        # ======================================================
-        if ticker != "GC=F":
-            if len(data) >= 2:
-                last = float(data["Close"].iloc[-1])
-                prev = float(data["Close"].iloc[-2])
-                pct = (last - prev) / prev * 100
-                return last, pct
+            if len(gold) >= 2 and len(fx) >= 1:
+                usd_today = float(gold["Close"].iloc[-1])
+                usd_yesterday = float(gold["Close"].iloc[-2])
+                pct_change = (usd_today - usd_yesterday) / usd_yesterday * 100
+
+                usdinr = float(fx["Close"].iloc[-1])
+
+                # convert USD/oz → INR per 10g
+                inr_per_gram = (usd_today / 31.1035) * usdinr
+                inr_10g = inr_per_gram * 10
+
+                return inr_10g, pct_change
+
             return None, None
 
-        # ======================================================
-        # 2) SPECIAL HANDLING FOR GOLD (GC=F)
-        # ======================================================
+        # --------------------------
+        # SPECIAL CASE: CRUDE OIL
+        # --------------------------
+        if ticker == "CL=F":
+            df = yf.Ticker("CL=F").history(period="5d")
+            if df.empty:
+                df = yf.Ticker("BZ=F").history(period="5d")  # fallback: Brent
 
-        # --- (A) Extract USD/oz values from Yahoo ---
-        if len(data) >= 2:
-            usd_today = float(data["Close"].iloc[-1])
-            usd_yesterday = float(data["Close"].iloc[-2])
-            pct_usd = (usd_today - usd_yesterday) / usd_yesterday * 100   # <<< OPTION 1
-        else:
-            usd_today = None
-            pct_usd = 0.0
+            if len(df) >= 2:
+                last = float(df["Close"].iloc[-1])
+                prev = float(df["Close"].iloc[-2])
+                pct = (last - prev) / prev * 100
+                return last, pct
 
-        # --- (B) Get USDINR rate ---
-        try:
-            fx = yf.Ticker("USDINR=X").history(period="2d")
-            usdinr = float(fx["Close"].iloc[-1])
-        except:
-            usdinr = 83.0  # fallback
+            return None, None
 
-        # --- (C) Convert Gold: USD/oz → INR per 10g ---
-        # 1 ounce = 31.1035 grams
-        # INR per 10g = (USD/oz / 31.1035) * USDINR * 10
-        if usd_today:
-            inr_per_gram = (usd_today / 31.1035) * usdinr
-            inr_10g = inr_per_gram * 10
-            return inr_10g, pct_usd
+        # --------------------------
+        # STANDARD CASE (all other macros)
+        # --------------------------
+        df = yf.Ticker(ticker).history(period="5d")
+        if len(df) >= 2:
+            last = float(df["Close"].iloc[-1])
+            prev = float(df["Close"].iloc[-2])
+            pct = (last - prev) / prev * 100
+            return last, pct
 
-        # Fallback for gold if Yahoo totally fails
         return None, None
 
     except Exception as e:
