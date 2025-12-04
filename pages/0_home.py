@@ -186,7 +186,7 @@ MACROS = {
     ),
     
     "Crude Oil": (
-        "CL=F",
+        "CRUDE",
         "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ7YJgVc8O5qY-yXfiWBJUtJo0i0Dsf0fARzg&s"
     )
 }
@@ -194,43 +194,41 @@ MACROS = {
 
 def fetch_macro(ticker):
     try:
+
         # ----------------------------------------------------
-        # 1) GOLD (Use Metals.live API instead of Yahoo)
+        # 1) GOLD (Use Metals.live API → INR per 10g)
         # ----------------------------------------------------
-        # -------------------------
-# GOLD (INR per 10g)
-# -------------------------
         if ticker == "GOLD_INR":
             try:
-                # Get USD/oz
+                # USD/oz from Metals.live
                 gold_api = "https://api.metals.live/v1/spot/gold"
                 gold_price = requests.get(gold_api).json()[0]  # USD per oz
-        
-                # USDINR
+
+                # Fetch USDINR
                 try:
                     fx = yf.Ticker("USDINR=X").history(period="2d")
                     usdinr = float(fx["Close"].iloc[-1])
                 except:
                     usdinr = 83.0  # fallback
-        
-                # Convert: USD/oz → INR per 10g
-                INR_per_gram = (gold_price / 31.1035) * usdinr
-                INR_10g = INR_per_gram * 10
-        
-                return INR_10g, None  # Metals API does not give % change
-        
-    except Exception as e:
-        print("GOLD API ERROR:", e)
-        return None, None
 
+                # Convert USD/oz → INR per 10 grams
+                inr_per_gram = (gold_price / 31.1035) * usdinr
+                inr_per_10g = inr_per_gram * 10
+
+                return inr_per_10g, None  # Metals API doesn't return % change
+
+            except Exception as e:
+                print("GOLD API ERROR:", e)
+                return None, None
 
         # ----------------------------------------------------
-        # 2) CRUDE OIL (Use api-ninjas commodity API)
+        # 2) CRUDE OIL (Use Api-Ninjas)
         # ----------------------------------------------------
-        if ticker == "CL=F":
+        if ticker == "CRUDE":
             try:
                 headers = {"X-Api-Key": st.secrets["ninjas"]["api_key"]}
                 url = "https://api.api-ninjas.com/v1/commodities?name=crude oil"
+
                 crude_data = requests.get(url, headers=headers).json()
 
                 if crude_data:
@@ -241,11 +239,11 @@ def fetch_macro(ticker):
                 return None, None
 
             except Exception as e:
-                print("Crude Error:", e)
+                print("CRUDE API ERROR:", e)
                 return None, None
 
         # ----------------------------------------------------
-        # 3) OTHER MACROS → still use Yahoo Finance
+        # 3) ALL OTHER MACROS → Yahoo Finance
         # ----------------------------------------------------
         data = yf.Ticker(ticker).history(period="5d")
         if len(data) >= 2:
