@@ -191,49 +191,49 @@ MACROS = {
     )
 }
 
-
 def fetch_macro(ticker):
     try:
+
         # ----------------------------------------------------
-        # 1) GOLD (INR per 10g using MetalPriceAPI)
+        # 1) GOLD (GC=F → Convert USD/oz → INR per 10g)
         # ----------------------------------------------------
         if ticker == "GOLD_INR":
             try:
-                url = "https://api.metalpriceapi.com/v1/latest"
-                params = {
-                    "api_key": "6299316948900caacac7dc9f57d0466b",
-                    "base": "USD",
-                    "currencies": "XAU"
-                }
+                gold = yf.Ticker("GC=F").history(period="1mo", interval="1d")
 
-                r = requests.get(url, params=params).json()
-
-                # --- USD Gold Spot per Ounce ---
-                if "rates" in r and "USDXAU" in r["rates"]:
-                    usd_per_oz = float(r["rates"]["USDXAU"])
-                else:
+                if gold is None or gold.empty:
+                    print("Gold history empty")
                     return None, None
 
-                # --- USDINR rate ---
-                try:
-                    fx = yf.Ticker("USDINR=X").history(period="2d")
-                    usdinr = float(fx["Close"].iloc[-1])
-                except:
-                    usdinr = 83.0  # fallback INR
+                # always works even if only 1 row exists
+                usd_today = float(gold["Close"].iloc[-1])
 
-                # --- Convert USD/oz → INR per 10g ---
-                inr_per_gram = (usd_per_oz / 31.1035) * usdinr
+                if len(gold) > 1:
+                    usd_prev = float(gold["Close"].iloc[-2])
+                else:
+                    usd_prev = usd_today  # → avoids out-of-bounds, gives 0% change
+
+                pct_change = (usd_today - usd_prev) / usd_prev * 100
+
+                # USD → INR conversion
+                fx = yf.Ticker("USDINR=X").history(period="5d")
+                if fx is not None and not fx.empty:
+                    usdinr = float(fx["Close"].iloc[-1])
+                else:
+                    usdinr = 83.0  # fallback
+
+                # Convert USD/oz → INR per 10g
+                inr_per_gram = (usd_today / 31.1035) * usdinr
                 inr_10g = inr_per_gram * 10
 
-                # No reliable % from API → use 0 or None
-                return inr_10g, None
+                return inr_10g, pct_change
 
             except Exception as e:
-                print("GOLD API ERROR:", e)
+                print("GOLD ERROR:", e)
                 return None, None
 
         # ----------------------------------------------------
-        # 2) CRUDE OIL (API-Ninja)
+        # 2) CRUDE OIL (api-ninjas → cleaner + more reliable)
         # ----------------------------------------------------
         if ticker == "CRUDE":
             try:
@@ -242,10 +242,10 @@ def fetch_macro(ticker):
 
                 crude_data = requests.get(url, headers=headers).json()
 
-                if crude_data:
-                    price = crude_data[0]["price"]
-                    pct = crude_data[0].get("price_change_pct", 0.0)
-                    return price, pct
+                if crude_data and isinstance(crude_data, list):
+                    price = crude_data[0].get("price")
+                    pct_change = crude_data[0].get("price_change_pct", 0)
+                    return price, pct_change
 
                 return None, None
 
@@ -254,21 +254,30 @@ def fetch_macro(ticker):
                 return None, None
 
         # ----------------------------------------------------
-        # 3) ALL OTHER MACROS (Yahoo Finance)
+        # 3) ALL OTHER MACROS → Yahoo Finance
         # ----------------------------------------------------
         data = yf.Ticker(ticker).history(period="5d")
 
-        if len(data) >= 2:
-            last = float(data["Close"].iloc[-1])
-            prev = float(data["Close"].iloc[-2])
-            pct = (last - prev) / prev * 100
-            return last, pct
+        if data is None or data.empty:
+            return None, None
 
-        return None, None
+        last = float(data["Close"].iloc[-1])
+
+        if len(data) > 1:
+            prev = float(data["Close"].iloc[-2])
+        else:
+            prev = last  # → avoid crash
+
+        pct = (last - prev) / prev * 100
+
+        return last, pct
 
     except Exception as e:
         print("MACRO ERROR:", ticker, e)
         return None, None
+
+
+     
 
 
 
