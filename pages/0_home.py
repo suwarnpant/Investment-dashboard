@@ -224,6 +224,70 @@ def build_clean_macro_snapshot(raw):
 clean_snapshot = build_clean_macro_snapshot(macro_snapshot)
 
 st.markdown("<h3 style='color:white; margin-top:25px;'>📰 Macro Summary</h3>", unsafe_allow_html=True)
+# ---------------------------------------------------------
+# LLM MACRO ANALYSIS
+# ---------------------------------------------------------
+from openai import OpenAI
+
+def generate_llm_macro_commentary(snapshot):
+    """
+    snapshot = { 'Nifty 50': {'latest':..., 'pct_change':...}, ... }
+    """
+    if not snapshot:
+        return "Macro data not available today for analysis."
+
+    # Build readable input text
+    formatted = []
+    for k, v in snapshot.items():
+        latest = v["latest"]
+        pct = v["pct_change"]
+        formatted.append(f"{k}: {latest:.2f} ({pct:+.2f}%)")
+
+    text_block = "\n".join(formatted)
+
+    prompt = f"""
+You are a global macro strategist. Analyze the following daily macro movements:
+
+{text_block}
+
+Provide a concise, high–value commentary in this structure:
+
+1. **Market Mood (1 paragraph)** — what sentiment do these shifts imply today?
+2. **Key Drivers (3–5 bullets)** — explain what is likely driving each major move.
+3. **Risk View (1 short paragraph)** — are conditions risk-on or risk-off?
+4. **Impact on US & Indian Equities (2 bullets each)** — who benefits & who gets pressured?
+5. **Actionable Guidance (3 bullets)** — what an investor like Suwarn should pay attention to today?
+
+Tone: sharp, clear, institutional-grade macro commentary.
+"""
+
+    try:
+        client = OpenAI(api_key=st.secrets["openai"]["api_key"])
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return resp.choices[0].message.content
+
+    except Exception as e:
+        print("LLM MACRO ERROR:", e)
+        return "⚠️ Macro AI unavailable (rate limit or network issue)."
+
+
+# Title
+st.markdown("<h3 style='color:white; margin-top:15px;'>🧠 AI Macro Commentary</h3>", unsafe_allow_html=True)
+
+with st.spinner("Generating macro insights…"):
+    macro_ai = generate_llm_macro_commentary(clean_snapshot)
+
+st.markdown(
+    f"""
+    <div class="macro-card" style="padding:25px; font-size:17px; line-height:1.5;">
+        {macro_ai}
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 if not clean_snapshot:
     st.info("Macro summary unavailable today.")
