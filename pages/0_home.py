@@ -219,9 +219,9 @@ def fetch_macro(ticker):
         
                 return INR_10g, None  # Metals API does not give % change
         
-            except Exception as e:
-                print("GOLD API ERROR:", e)
-                return None, None
+    except Exception as e:
+        print("GOLD API ERROR:", e)
+        return None, None
 
 
         # ----------------------------------------------------
