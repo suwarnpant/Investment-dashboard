@@ -182,7 +182,7 @@ MACROS = {
         "USDINR=X",
         "https://p7.hiclipart.com/preview/309/810/323/indian-rupee-sign-computer-icons-currency-symbol-icon-design-rupee.jpg"
     ),
-    "Gold": ("GC=F", "https://png.pngtree.com/png-vector/20200615/ourmid/pngtree-physical-gold-bar-cartoon-golden-vector-png-image_2256034.jpg"
+    "Gold": ("GOLD_INR", "https://png.pngtree.com/png-vector/20200615/ourmid/pngtree-physical-gold-bar-cartoon-golden-vector-png-image_2256034.jpg"
     ),
     
     "Crude Oil": (
@@ -197,23 +197,32 @@ def fetch_macro(ticker):
         # ----------------------------------------------------
         # 1) GOLD (Use Metals.live API instead of Yahoo)
         # ----------------------------------------------------
-        if ticker == "GC=F":
-            try:
-                gold_data = requests.get("https://api.metals.live/v1/spot/gold").json()
-                usd_price = gold_data[0]  # price per oz in USD
+        # -------------------------
+# GOLD (INR per 10g)
+# -------------------------
+if ticker == "GOLD_INR":
+    try:
+        # Get USD/oz
+        gold_api = "https://api.metals.live/v1/spot/gold"
+        gold_price = requests.get(gold_api).json()[0]  # USD per oz
 
-                # fetch USDINR
-                fx = yf.Ticker("USDINR=X").history(period="2d")
-                usdinr = float(fx["Close"].iloc[-1])
+        # USDINR
+        try:
+            fx = yf.Ticker("USDINR=X").history(period="2d")
+            usdinr = float(fx["Close"].iloc[-1])
+        except:
+            usdinr = 83.0  # fallback
 
-                # convert USD/oz → INR per 10g
-                inr_per_gram = (usd_price / 31.1035) * usdinr
-                inr_10g = inr_per_gram * 10
+        # Convert: USD/oz → INR per 10g
+        INR_per_gram = (gold_price / 31.1035) * usdinr
+        INR_10g = INR_per_gram * 10
 
-                return inr_10g, 0.0  # Metals API does not give % change
-            except Exception as e:
-                print("Gold Error:", e)
-                return None, None
+        return INR_10g, None  # Metals API does not give % change
+
+    except Exception as e:
+        print("GOLD API ERROR:", e)
+        return None, None
+
 
         # ----------------------------------------------------
         # 2) CRUDE OIL (Use api-ninjas commodity API)
