@@ -278,7 +278,11 @@ Tone: sharp, clear, institutional-grade macro commentary.
 st.markdown("<h3 style='color:white; margin-top:15px;'>🧠 AI Macro Commentary</h3>", unsafe_allow_html=True)
 
 with st.spinner("Generating macro insights…"):
-    macro_ai = generate_llm_macro_commentary(clean_snapshot)
+    @st.cache_data(ttl=3600)
+    def cached_macro_ai(snapshot):
+        return generate_llm_macro_commentary(snapshot)
+
+macro_ai = cached_macro_ai(clean_snapshot)
 
 st.markdown(
     f"""
