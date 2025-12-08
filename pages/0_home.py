@@ -284,33 +284,28 @@ with st.spinner("Generating macro insights…"):
 
 macro_ai = cached_macro_ai(clean_snapshot)
 
-st.markdown(
-    f"""
-    <div class="macro-card" 
-         style="
-            padding:28px; 
-            font-size:17px; 
-            line-height:1.6;
-            text-align:left;
-            color: #f0f0f0;
-            border-radius:22px;
-        ">
-        <div style="
-            font-weight:600;
-            font-size:20px;
-            margin-bottom:12px;
-            letter-spacing:0.3px;
-        ">
-            📉 AI Macro Commentary
-        </div>
+# -------------------------------
+# AI MACRO COMMENTARY (LEFT ALIGNED, MARKDOWN ENABLED)
+# -------------------------------
 
-        <div style="white-space:pre-wrap;">
-            {macro_ai}
-        </div>
-    </div>
+st.markdown(
+    """
+    <div class="macro-card" style="
+        padding:28px;
+        border-radius:22px;
+        text-align:left;
+        color:white;
+        margin-top:15px;
+    ">
     """,
     unsafe_allow_html=True
 )
+
+# Render markdown INSIDE the styled card
+st.markdown(macro_ai, unsafe_allow_html=False)
+
+st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 if not clean_snapshot:
