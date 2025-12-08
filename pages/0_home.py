@@ -286,12 +286,32 @@ macro_ai = cached_macro_ai(clean_snapshot)
 
 st.markdown(
     f"""
-    <div class="macro-card" style="padding:25px; font-size:17px; line-height:1.5;">
-        {macro_ai}
+    <div class="macro-card" 
+         style="
+            padding:28px; 
+            font-size:17px; 
+            line-height:1.6;
+            text-align:left;
+            color: #f0f0f0;
+            border-radius:22px;
+        ">
+        <div style="
+            font-weight:600;
+            font-size:20px;
+            margin-bottom:12px;
+            letter-spacing:0.3px;
+        ">
+            📉 AI Macro Commentary
+        </div>
+
+        <div style="white-space:pre-wrap;">
+            {macro_ai}
+        </div>
     </div>
     """,
     unsafe_allow_html=True
 )
+
 
 if not clean_snapshot:
     st.info("Macro summary unavailable today.")
