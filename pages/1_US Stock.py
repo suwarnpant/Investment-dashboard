@@ -9,7 +9,7 @@ from utils.llm_engine import analyze_thesis
 
 
 st.set_page_config(page_title="US Stocks", layout="wide")
-st.title("🇺🇸 US Stock Equities")
+st.title(" US Stock")
 
 
 # ---------------------------------------------------------
@@ -315,4 +315,4 @@ for _, row in df.reset_index(drop=True).iterrows():
             st.caption("No AI output yet. Click **Generate AI for ALL** above.")
 
 st.markdown("---")
-st.caption("LLM outputs are for decision support only, not investment advice.")
+st.caption("")
