@@ -8,7 +8,7 @@ from utils.portfolio_engine import read_google_sheet
 from utils.llm_engine import analyze_thesis
 
 st.set_page_config(page_title="India Equities", layout="wide")
-st.title("🇮🇳 Indian Equity Portfolio")
+st.title("Indian Stocks")
 
 # ---------------------------------------------------------
 # 1) LOAD & PREPARE DATA
@@ -295,4 +295,4 @@ for _, row in df.reset_index(drop=True).iterrows():
             st.caption("No AI output yet. Use the button above: “Generate AI for ALL (throttled)”")
 
 st.markdown("---")
-st.caption("LLM outputs are for decision support only, not investment advice.")
+st.caption("")
