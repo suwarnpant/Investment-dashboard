@@ -1,33 +1,298 @@
 import streamlit as st
 import pandas as pd
-from utils.portfolio_engine import read_google_sheet, calculate_portfolio
-from utils.news_engine import fetch_news_finnhub
+import numpy as np
+import yfinance as yf
+import time
+
+from utils.portfolio_engine import read_google_sheet
 from utils.llm_engine import analyze_thesis
 
-st.title("📊 Asset Breakdown")
+st.set_page_config(page_title="India Equities", layout="wide")
+st.title("🇮🇳 Indian Equity Portfolio")
 
-df = calculate_portfolio(read_google_sheet(st.secrets["google"]["sheet_id"]))
+# ---------------------------------------------------------
+# 1) LOAD & PREPARE DATA
+# ---------------------------------------------------------
+df = read_google_sheet(st.secrets["google"]["sheet_id"])
 
-asset_list = df['asset_name'].tolist()
-selected = st.selectbox("Select an asset", asset_list)
+required = ["asset_name", "ticker", "category", "units", "avg_price", "thesis", "sector", "country"]
+for col in required:
+    if col not in df.columns:
+        st.error(f"Missing required column in sheet: '{col}'")
+        st.stop()
 
-row = df[df['asset_name'] == selected].iloc[0]
+df["country"] = df["country"].fillna("").astype(str)
+df["ticker"] = df["ticker"].fillna("").astype(str).str.strip()
+df["asset_name"] = df["asset_name"].fillna("").astype(str)
+df["thesis"] = df["thesis"].fillna("").astype(str)
+df["sector"] = df["sector"].fillna("").astype(str)
+df["category"] = df["category"].fillna("").astype(str)
 
-st.subheader(selected)
-st.write(row)
+# Filter only Indian equities (Country = IND)
+df = df[df["country"].str.strip().str.upper() == "IND"].copy()
+df = df[df["ticker"] != ""].copy()
 
-news = fetch_news_finnhub(row['ticker'])
+if df.empty:
+    st.warning("No Indian equities found. Ensure 'country' column is set to 'IND' and tickers are filled.")
+    st.caption("For yfinance, Indian tickers usually look like: RELIANCE.NS, TCS.NS, HDFCBANK.NS (or .BO).")
+    st.stop()
 
-with st.spinner("Analyzing investment thesis..."):
-    analysis = analyze_thesis(
-        asset=row.get('asset_name', ''),
-        ticker=row.get('ticker', ''),
-        price=row.get('current_price', row.get('price', 0)),
-        high52=row.get('52w_high', row.get('high52', 0)),
-        low52=row.get('52w_low', row.get('low52', 0)),
-        api_key=st.secrets["openai"]["api_key"]
+# Ensure numeric
+df["units"] = pd.to_numeric(df["units"], errors="coerce").fillna(0.0)
+df["avg_price"] = pd.to_numeric(df["avg_price"], errors="coerce").fillna(0.0)
+
+# ---------------------------------------------------------
+# 2) LIVE DATA (YFinance) — cached
+# ---------------------------------------------------------
+@st.cache_data(ttl=900, show_spinner=False)
+def get_live_fields(ticker: str):
+    """Returns (current_price, 52w_high, 52w_low) using last 1y of data."""
+    try:
+        hist = yf.Ticker(ticker).history(period="1y")
+        if hist is None or hist.empty:
+            return None, None, None
+        current = float(hist["Close"].iloc[-1])
+        high_52 = float(hist["High"].max())
+        low_52 = float(hist["Low"].min())
+        return current, high_52, low_52
+    except Exception:
+        return None, None, None
+
+@st.cache_data(ttl=900, show_spinner=False)
+def get_day_change_pct(ticker: str):
+    """Returns (day_change_pct, last_close, prev_close) based on last 2 daily closes (period=5d)."""
+    try:
+        h = yf.Ticker(ticker).history(period="5d", interval="1d")
+        if h is None or h.empty or len(h) < 2:
+            return None, None, None
+        last = float(h["Close"].iloc[-1])
+        prev = float(h["Close"].iloc[-2])
+        if prev == 0:
+            return None, last, prev
+        pct = (last - prev) / prev * 100
+        return pct, last, prev
+    except Exception:
+        return None, None, None
+
+df["current_price"], df["52w_high"], df["52w_low"] = zip(*df["ticker"].apply(get_live_fields))
+df["day_change_pct"], df["last_close"], df["prev_close"] = zip(*df["ticker"].apply(get_day_change_pct))
+
+# Portfolio metrics (₹ assumed since Indian stocks are INR in yfinance)
+df["position_invested"] = df["units"] * df["avg_price"]
+df["position_value"] = df["units"] * df["current_price"].fillna(0.0)
+df["pnl_absolute"] = df["position_value"] - df["position_invested"]
+df["pnl_pct"] = np.where(
+    df["position_invested"] > 0,
+    (df["pnl_absolute"] / df["position_invested"]) * 100,
+    np.nan,
+)
+
+total_value = float(df["position_value"].sum())
+df["weight_pct"] = np.where(total_value > 0, df["position_value"] / total_value * 100, np.nan)
+
+# Sort by current value
+df.sort_values("position_value", ascending=False, inplace=True)
+
+# ---------------------------------------------------------
+# 3) TOP MOVERS TODAY
+# ---------------------------------------------------------
+st.subheader("⚡ Top Movers (last close vs previous close)")
+movers = df[["asset_name", "ticker", "day_change_pct", "last_close", "prev_close"]].copy()
+movers = movers[pd.notnull(movers["day_change_pct"])].copy()
+
+if movers.empty:
+    st.caption("No mover data available right now (Yahoo may have returned empty).")
+else:
+    top_gainers = movers.sort_values("day_change_pct", ascending=False).head(3)
+    top_losers = movers.sort_values("day_change_pct", ascending=True).head(3)
+
+    g1, g2 = st.columns(2)
+    with g1:
+        st.markdown("**Top Gainers**")
+        for _, r in top_gainers.iterrows():
+            st.write(f"▲ **{r['asset_name']} ({r['ticker']})** — {r['day_change_pct']:+.2f}%")
+
+    with g2:
+        st.markdown("**Top Losers**")
+        for _, r in top_losers.iterrows():
+            st.write(f"▼ **{r['asset_name']} ({r['ticker']})** — {r['day_change_pct']:+.2f}%")
+
+st.markdown("---")
+
+# ---------------------------------------------------------
+# 4) PORTFOLIO TABLE
+# ---------------------------------------------------------
+st.subheader("📊 Current Indian Equity Portfolio")
+
+portfolio_view = df[[
+    "asset_name", "ticker", "units", "avg_price", "current_price",
+    "position_invested", "position_value", "weight_pct",
+    "pnl_absolute", "pnl_pct", "day_change_pct",
+    "52w_high", "52w_low",
+    "thesis", "sector", "category"
+]].copy()
+
+portfolio_view.rename(columns={
+    "asset_name": "Stock",
+    "ticker": "Ticker",
+    "units": "Units",
+    "avg_price": "Avg Buy Price (₹)",
+    "current_price": "Current Price (₹)",
+    "position_invested": "Invested (₹)",
+    "position_value": "Current Value (₹)",
+    "weight_pct": "Weight (%)",
+    "pnl_absolute": "PnL (₹)",
+    "pnl_pct": "PnL (%)",
+    "day_change_pct": "Day Chg (%)",
+    "52w_high": "52W High",
+    "52w_low": "52W Low",
+    "thesis": "Thesis",
+    "sector": "Sector",
+    "category": "Category",
+}, inplace=True)
+
+total_invested = float(portfolio_view["Invested (₹)"].sum())
+total_value = float(portfolio_view["Current Value (₹)"].sum())
+total_pnl = total_value - total_invested
+total_pnl_pct = (total_pnl / total_invested * 100) if total_invested > 0 else 0.0
+
+c1, c2, c3, c4, c5 = st.columns(5)
+c1.metric("Total Invested", f"₹{total_invested:,.0f}")
+c2.metric("Current Value", f"₹{total_value:,.0f}")
+c3.metric("Total PnL (₹)", f"₹{total_pnl:,.0f}")
+c4.metric("Total PnL (%)", f"{total_pnl_pct:,.2f}%")
+c5.metric("Positions", f"{len(portfolio_view)}")
+
+st.dataframe(
+    portfolio_view.style.format({
+        "Avg Buy Price (₹)": "{:.2f}",
+        "Current Price (₹)": "{:.2f}",
+        "Invested (₹)": "{:.2f}",
+        "Current Value (₹)": "{:.2f}",
+        "Weight (%)": "{:.2f}",
+        "PnL (₹)": "{:.2f}",
+        "PnL (%)": "{:.2f}",
+        "Day Chg (%)": "{:.2f}",
+        "52W High": "{:.2f}",
+        "52W Low": "{:.2f}",
+    }),
+    use_container_width=True,
+    hide_index=True,
+)
+
+st.markdown("---")
+
+# ---------------------------------------------------------
+# 5) LLM (cached) + SESSION STORAGE
+# ---------------------------------------------------------
+@st.cache_data(ttl=3600, show_spinner=False)
+def get_llm_signal_cached(
+    asset_name: str,
+    ticker: str,
+    thesis: str,
+    units: float,
+    avg_price: float,
+    current_price: float,
+    high_52: float,
+    low_52: float,
+):
+    return analyze_thesis(
+        asset=asset_name,
+        ticker=ticker,
+        thesis=thesis or "",
+        units=float(units),
+        avg_price=float(avg_price),
+        price=float(current_price),
+        high52=float(high_52),
+        low52=float(low_52),
     )
 
+if "ai_results_ind" not in st.session_state:
+    st.session_state["ai_results_ind"] = {}  # key: ticker -> markdown
 
-st.markdown("### 🧠 Investment Thesis")
-st.write(analysis)
+# ---------------------------------------------------------
+# 6) GENERATE AI FOR ALL (throttled) — single button only
+# ---------------------------------------------------------
+st.subheader("🤖 AI Thesis Validation (All Indian Equities)")
+
+run_all = st.button("🚀 Generate AI for ALL (throttled)")
+st.caption("Runs sequentially with a short delay to reduce rate-limits. Results persist during your session.")
+
+if run_all:
+    progress = st.progress(0)
+    status = st.empty()
+
+    rows = df.reset_index(drop=True)
+    n = len(rows)
+
+    for i, row in rows.iterrows():
+        ticker = str(row["ticker"])
+        asset = str(row["asset_name"])
+
+        status.write(f"Generating AI: **{asset} ({ticker})**  ({i+1}/{n})")
+
+        cur = row["current_price"]
+        h52 = row["52w_high"]
+        l52 = row["52w_low"]
+
+        if pd.isnull(cur) or pd.isnull(h52) or pd.isnull(l52):
+            st.session_state["ai_results_ind"][ticker] = "⚠️ Live price/52W data missing (yfinance empty)."
+        else:
+            try:
+                md = get_llm_signal_cached(
+                    asset_name=asset,
+                    ticker=ticker,
+                    thesis=str(row.get("thesis", "")),
+                    units=float(row["units"]),
+                    avg_price=float(row["avg_price"]),
+                    current_price=float(cur),
+                    high_52=float(h52),
+                    low_52=float(l52),
+                )
+                st.session_state["ai_results_ind"][ticker] = md
+            except Exception:
+                st.session_state["ai_results_ind"][ticker] = "⚠️ AI call failed (rate limit / network). Try again later."
+
+        progress.progress(int((i + 1) / n * 100))
+        time.sleep(1.2)
+
+    status.success("Done. Expand each stock below to view the AI output.")
+
+st.markdown("---")
+
+# ---------------------------------------------------------
+# 7) DEEP DIVE PER STOCK (no per-stock button)
+# ---------------------------------------------------------
+st.subheader("🔍 Deep Dive: Per Stock")
+
+for _, row in df.reset_index(drop=True).iterrows():
+    asset = row["asset_name"]
+    ticker = row["ticker"]
+    title = f"{asset} ({ticker})"
+
+    with st.expander(title, expanded=False):
+        top1, top2, top3, top4, top5 = st.columns(5)
+
+        cur = row["current_price"]
+        h52 = row["52w_high"]
+        l52 = row["52w_low"]
+        pnlp = row["pnl_pct"]
+        wgt = row["weight_pct"]
+
+        top1.metric("Current Price", f"{cur:.2f}" if pd.notnull(cur) else "—")
+        top2.metric("52W High", f"{h52:.2f}" if pd.notnull(h52) else "—")
+        top3.metric("52W Low", f"{l52:.2f}" if pd.notnull(l52) else "—")
+        top4.metric("PnL (%)", f"{pnlp:.2f}%" if pd.notnull(pnlp) else "—")
+        top5.metric("Weight (%)", f"{wgt:.2f}%" if pd.notnull(wgt) else "—")
+
+        st.markdown("**Your Current Thesis**")
+        st.write(row.get("thesis", "") or "_No thesis text captured yet._")
+
+        if ticker in st.session_state["ai_results_ind"]:
+            st.markdown("### 🤖 AI View on This Position")
+            st.markdown(st.session_state["ai_results_ind"][ticker])
+        else:
+            st.caption("No AI output yet. Use the button above: “Generate AI for ALL (throttled)”")
+
+st.markdown("---")
+st.caption("LLM outputs are for decision support only, not investment advice.")
